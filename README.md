@@ -8,11 +8,11 @@ This repository contains the RMarkdowns, script used, and compiled HTML's.
 
 To read just the result, here is the table of contents:
 
-1. [Introduction]()
-2. [Regression Models]()
-3. [Classical Linear Model]()
+1. [Introduction](https://starbrand.github.io/EPG3510-Examples/01-Introduction.nb.html)
+2. [Regression Models](https://starbrand.github.io/EPG3510-Examples/02-Regression-Models.nb.html)
+3. [Classical Linear Model](https://starbrand.github.io/EPG3510-Examples/03-Classical-Linear-Model.nb.html)
 4.
 
 If you want to check the source code for, for example, know how to write the equation in Latex, explore this repository.
 
-Any observation, correction, or improvement, you are welcome [to write an issue]().
+Any observation, correction, or improvement, you are welcome [to write an issue](https://github.com/StarBrand/EPG3510-Examples/issues).
