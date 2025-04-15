@@ -1,0 +1,1024 @@
+---
+title: "The Classical LinearModel"
+output: html_notebook
+---
+
+## Homoscedastic Error Variances
+
+For the visualization of homocedastic and hetercedastic variance, we simulate:
+
+$$
+y \sim N \left ( -1 + 2x, 1 \right )
+$$
+
+The funnel-shaped heterocedasticy is simulated using:
+
+$$
+y \sim N \left ( -1 + 2x, \left ( 0.1 + 0.3 \left ( x + 3 \right ) \right )^{2} \right )
+$$
+
+```{r, fig.width=10, fig.height=8, fig.align='center'}
+par(mfrow = c(2, 2))
+
+# Homecedastic variance
+X <- seq(-2, 2, length.out = 300)
+
+homecedastic_random <- function (x){
+  rnorm(1, mean = -1 + 2 * x,  sd = 1)[1]
+}
+
+homo_y <- sapply(X, homecedastic_random)
+homo_e <- (-1 + 2 * X) - homo_y
+
+plot(X, homo_y, xlab='', ylab='', main='homocedastic variance')
+abline(-1, 2, col = "red", lwd=2)
+plot(X, homo_e, xlab='', ylab='', main='homocedastic variance errors')
+abline(0, 0, col = "red", lwd=2)
+
+heterocedastic_random <- function (x){
+  rnorm(1, mean = -1 + 2 * x, sd = 0.1 + 0.3 * (x + 3))[1]
+}
+
+hetero_y <- sapply(X, heterocedastic_random)
+hetero_e <- (-1 + 2 * X) - hetero_y
+
+plot(X, hetero_y, xlab='', ylab='', main='funnel-shaped heterocedastic variance')
+abline(-1, 2, col = "red", lwd=2)
+plot(X, hetero_e, xlab='', ylab='', main='funnel-shaped heterocedastic variance errors')
+abline(0, 0, col = "red", lwd=2)
+```
+
+## Example 3.1 Munich Rent Index—Heteroscedastic Variances
+
+```{r, fig.width=10, fig.height=4, fig.align='center'}
+par(mfrow = c(1, 2))
+
+munich_rent_url <- "https://www.uni-goettingen.de/de/document/download/64c29c1b1fccb142cfa8f29a942a9e05.raw/rent99.raw"
+
+munich_rent_index <- read.table(
+  url(munich_rent_url),
+  header = 1,
+  colClasses = c(
+    "numeric", "numeric", "numeric",
+    "numeric", "factor", "factor",
+    "factor", "factor", "factor"
+  )
+)
+
+simple_reg <- lm(rent ~ area, data = munich_rent_index)
+
+plot(munich_rent_index$area, munich_rent_index$rent, xlab = 'area in sqm', ylab = 'net rent in Euro')
+abline(simple_reg, col = "red", lwd = 2)
+
+predicted <- predict(simple_reg)
+
+plot(munich_rent_index$area, predicted - munich_rent_index$rent, xlab = 'area in sqm', ylab = 'residuals')
+abline(0, 0, col = "red", lwd = 2)
+```
+
+## Uncorrelated Errors
+
+Simulated autocorrelated errors with positive correlation are generated using:
+
+$$
+y_{i} = -1 + 2 x_{i} + \epsilon_{i}
+$$
+$$
+\text{Where } \epsilon_{i} = 0.9 \epsilon_{i - 1} + \mu_{i} \wedge \mu_{i} \sim N(0, 0.5^{2})
+$$
+
+```{r, fig.width=10, fig.height=4, fig.align='center'}
+par(mfrow = c(1, 2))
+
+n <- 100
+X <- seq(-3, 3, length.out = n)
+mu <- rnorm(n, mean = 0, sd = 0.5)
+
+epsilon <- mu[1]
+for(i in seq(2, n)){
+  epsilon <- c(epsilon, 0.9 * epsilon[i - 1] + mu[i])
+}
+
+y_pred <- -1 + 2 * X + epsilon
+
+plot(X, y_pred, xlab = 'x', ylab = '', main = 'observations and regression line')
+abline(-1, 2, col = "red", lwd = 2)
+
+plot(epsilon, xlab = 'i', ylab = '', main = 'time series of the errors')
+abline(0, 0, col = "red", lwd = 2)
+```
+
+Simulated autocorrelated errors with negative correlation are generated using:
+
+$$
+y_{i} = -1 + 2 x_{i} + \epsilon_{i}
+$$
+$$
+\text{Where } \epsilon_{i} = - 0.9 \epsilon_{i - 1} + \mu_{i} \wedge \mu_{i} \sim N(0, 0.5^{2})
+$$
+
+```{r, fig.width=10, fig.height=4, fig.align='center'}
+par(mfrow = c(1, 2))
+
+n <- 100
+X <- seq(-3, 3, length.out = n)
+mu <- rnorm(n, mean = 0, sd = 0.5)
+
+epsilon <- mu[1]
+for(i in seq(2, n)){
+  epsilon <- c(epsilon, -0.9 * epsilon[i - 1] + mu[i])
+}
+
+y_pred <- -1 + 2 * X + epsilon
+
+plot(X, y_pred, xlab = 'x', ylab = '', main = 'observations and regression line')
+abline(-1, 2, col = "red", lwd = 2)
+
+plot(epsilon, xlab = 'i', ylab = '', main = 'time series of the errors')
+abline(0, 0, col = "red", lwd = 2)
+```
+
+Mispecified model is simulated using:
+
+$$
+y_{i} = \sin(x_{i}) + x_{i} + \epsilon_{i}
+$$
+$$
+\text{Where } \epsilon_{i} \sim N(0, 0.3^{2})
+$$
+
+```{r, fig.width=10, fig.height=8, fig.align='center'}
+par(mfrow = c(2, 2))
+
+n <- 100
+X <- seq(-3, 3, length.out = n)
+epsilon <- rnorm(n, mean = 0, sd = 0.3)
+
+y <- sin(X) + X + epsilon
+
+plot(X, y, xlab = '', ylab = '', main = 'observations and true function')
+lines(X, sin(X) + X, col = "red", lwd = 2)
+
+linear_model <- lm(y ~ X)
+
+plot(X, y, xlab = '', ylab = '', main = 'observations and regression line')
+abline(linear_model, col = "red", lwd = 2)
+
+y_pred <- predict(linear_model, data = X)
+res <- y_pred - y
+plot(X, res, xlab = '', ylab = '', main = 'residuals')
+abline(0, 0, col = "red", lwd = 2)
+```
+
+## Additivity of Errors
+
+We simulate data using:
+
+$$
+y_{i} = \exp(1 + x_{i1} - x_{i2} + \epsilon_{i})
+$$
+
+With:
+$$
+\epsilon_{i} \sim N \left ( 0, {0.4}^{2} \right )
+$$
+
+We plot this model:
+
+```{r, fig.width=10, fig.height=8, fig.align='center'}
+par(mfrow = c(2, 2))
+
+n <- 50
+
+x1 <- seq(0, 3, length.out = n)
+x2 <- seq(0, 3, length.out = n)
+x_grid <- expand.grid(x1 = x1, x2 = x2)
+epsilon <- rnorm(n^2, mean = 0, sd = 0.4)
+y <- exp(1 + x_grid$x1 - x_grid$x2 + epsilon)
+
+plot(
+  x_grid$x1, y,
+  main = 'scatter plot: y versus x1',
+  xlab = 'x1',
+  ylab = 'y'
+)
+plot(
+  x_grid$x2, y,
+  main = 'scatter plot: y versus x2',
+  xlab = 'x2',
+  ylab = 'y'
+)
+
+plot(
+  x_grid$x1, log(y),
+  main = 'scatter plot: log(y) versus x1',
+  xlab = 'x1',
+  ylab = 'log(y)'
+)
+plot(
+  x_grid$x2, log(y),
+  main = 'scatter plot: log(y) versus x2',
+  xlab = 'x2',
+  ylab = 'log(y)'
+)
+```
+
+## Example 3.2 Supermarket Scanner Data
+
+Data not available online.
+
+## Example 3.3 Munich Rent Index — Variable Transformation
+
+Importing data using script:
+
+```{r}
+source("import_data/munich_rent_index.R")
+```
+
+We do the regression model:
+
+$$
+\text{rentsqm}_{i} = \beta_{0} + \beta_{1} \cdot f(\text{area}_{i}) + \epsilon_{i}
+$$
+
+With both $f(\cdot)$:
+
+$$
+f(\text{area}_{i}) = \text{area}_{i}
+$$
+
+For linear model and:
+
+$$
+f(\text{area}_{i}) = \frac{1}{\text{area}_{i}}
+$$
+
+For future use we define those models:
+
+**Model 1 ($M1$)**:
+
+$$
+\mathbb{E}(\text{rentqsm}) = \beta_{0} + \beta_{1} \text{area}
+$$
+
+**Model 2 ($M2$)**:
+
+$$
+\mathbb{E}(\text{rentqsm}) = \beta_{0} + \beta_{1} \frac{1}{\text{area}}
+$$
+
+For nonlinear relationship between $\text{rentsqm}$ and $\text{area}$. The plotted graph below are those two models with the left panels the linear regression without the transformation and the right panels with the inverse transformation.
+
+```{r, fig.width=10, fig.height=12, fig.align='center'}
+par(mfrow = c(3, 2))
+
+m1 <- lm(rentsqm ~ area, data = munich_rent_index)
+summary(m1)
+
+m2 <- lm(rentsqm ~ I(1 / area), data = munich_rent_index)
+summary(m2)
+
+plot_rentsqm_area <- function(title) {
+  plot(
+    munich_rent_index$area,
+    munich_rent_index$rentsqm,
+    main = title,
+    xlab = 'area in sqm',
+    ylab = 'rent per sqm'
+  )
+}
+
+seq_area <- seq(min(munich_rent_index$area), max(munich_rent_index$area), length.out = 100)
+
+plot_rentsqm_area('rent per sqm vs. area')
+m1_beta <- m1$coefficients
+lines(seq_area, m1_beta[1] + m1_beta[2] * seq_area, col = 'red', lwd = 2)
+
+plot_rentsqm_area('f(area) = 1/area')
+m2_beta <- m2$coefficients
+lines(seq_area, m2_beta[1] + m2_beta[2] * 1 / seq_area, col = 'red', lwd = 2)
+
+plot_residuals <- function(model) {
+  plot(
+    munich_rent_index$area,
+    model$residuals,
+    main = 'residuals',
+    xlab = 'area in sqm',
+    ylab = 'residuals'
+  )
+  abline(0, 0, col = 'red', lwd = 2)
+}
+
+plot_residuals(m1)
+plot_residuals(m2)
+
+plot_av_residuals <- function(model) {
+  av_residuals <- tapply(
+    model$residuals, munich_rent_index$area,
+    mean
+  )
+  plot(
+    unique(munich_rent_index$area),
+    av_residuals,
+    main = 'average residuals',
+    xlab = 'area in sqm',
+    ylab = 'residuals'
+  )
+  abline(0, 0, col = 'red', lwd = 2)
+}
+
+plot_av_residuals(m1)
+plot_av_residuals(m2)
+```
+
+
+## Example 3.4 Munich Rent Index — Polynomial Regression
+
+For polynomial regressions we adjust two different model. Of second-order (**Model 3 ($M3$)**):
+
+$$
+\mathbb{E}(\text{rentqsm}) = \beta_{0} + \beta_{1} \text{area} + \beta_{2} \text{area}^{2}
+$$
+
+And third-order (**Model 4 ($M4$)**):
+
+$$
+\mathbb{E}(\text{rentqsm}) = \beta_{0} + \beta_{1} \text{area} + \beta_{2} \text{area}^{2} + \beta_{3} \text{area}^{3}
+$$
+
+```{r, fig.width=10, fig.height=12, fig.align='center'}
+par(mfrow = c(2, 2))
+
+m3 <- lm(rentsqm ~ area + I(area^2), data = munich_rent_index)
+summary(m3)
+
+m4 <- lm(rentsqm ~ area + I(area^2) + I(area^3), data = munich_rent_index)
+summary(m4)
+
+plot_rentsqm_area('rent per sqm vs. area')
+m3_beta <- m3$coefficients
+lines(seq_area, m3_beta[1] + m3_beta[2] * seq_area + m3_beta[3] * seq_area ^ 2, col = 'red', lwd = 2)
+
+plot_rentsqm_area('f(area) = 1/area')
+m4_beta <- m4$coefficients
+lines(seq_area, m4_beta[1] + m4_beta[2] * seq_area + m4_beta[3] * seq_area ^ 2 + m4_beta[4] * seq_area ^ 3, col = 'red', lwd = 2)
+
+plot_residuals(m3)
+plot_residuals(m4)
+```
+
+## Example 3.5 Munich Rent Index — Additive Models
+
+We define the following aditive models. Additive model 1:
+
+$$
+\mathcal{E}(\text{rentsqm}_{i}) = \beta_{0} + \beta_{1} \cdot \frac{1}{\text{area}_{i}} + \beta_{2} \cdot \text{yearc}_{i}
+$$
+
+And a second one with $\text{yearc}$ as a polinomial of degree 3:
+
+$$
+\mathcal{E}(\text{rentsqm}_{i}) = \beta_{0} + \beta_{1} \cdot \frac{1}{\text{area}_{i}} + \beta_{2} \cdot \text{yearc}_{i} + \beta_{3} \cdot {\text{yearc}_{i}}^{2} + \beta_{4} \cdot {\text{yearc}_{i}}^{3}
+$$
+
+```{r}
+additive_m1 <- lm(rentsqm ~ I(1/area) + yearc, data = munich_rent_index)
+summary(additive_m1)
+
+additive_m2 <- lm(rentsqm ~ I(1/area) + yearc + I(yearc ^ 2)+ I(yearc ^ 3), data = munich_rent_index)
+summary(additive_m2)
+```
+
+A third model is specified using the truncated year of construction ($\text{yearc} - 1900$):
+
+```{r}
+munich_rent_index$yearco <- munich_rent_index$yearc - 1900
+additive_m3 <- lm(rentsqm ~ I(1/area) + yearco + I(yearco ^ 2)+ I(yearco ^ 3), data = munich_rent_index)
+summary(additive_m3)
+```
+
+As in the book, we show the effect of year of construction in the polynomial of degree 3:
+
+```{r, fig.width=10, fig.height=4, fig.align='center'}
+par(mfrow = c(1, 2))
+beta_add_m2 <- additive_m2$coefficients
+
+yearc_seq <- seq(min(munich_rent_index$yearc), max(munich_rent_index$yearc), length.out = 100)
+
+plot_effect <- function(beta, year_seq, title){
+  plot(
+    year_seq,
+    beta[3] * year_seq + beta[4] * year_seq^2 + beta[5] * year_seq^3,
+    main = title,
+    xlab = 'year of construction',
+    ylab = 'effect of year of construction',
+    type = 'l',
+    col = 'darkblue',
+    lwd = 2
+  )
+}
+
+plot_effect(beta_add_m2, yearc_seq, 'effect of year of construction')
+
+beta_add_m3 <- additive_m3$coefficients
+truncate_yearc_seq <- seq(min(munich_rent_index$yearco), max(munich_rent_index$yearco), length.out = 100)
+plot_effect(beta_add_m3, truncate_yearc_seq, 'effect of year of construction, coded from 18 to 96')
+```
+
+A new model is defined using the orthogonal polynomial of year of construction:
+
+```{r}
+munich_rent_index$areainv <- (1 / munich_rent_index$area) - mean(1 / munich_rent_index$area)
+poly_year <- poly(munich_rent_index$yearco - mean(munich_rent_index$yearco), 3)
+munich_rent_index$yearcc <- poly_year[, 1]
+munich_rent_index$yearcc2 <- poly_year[, 2]
+munich_rent_index$yearcc3 <- poly_year[, 3]
+additive_m4 <- lm(rentsqm ~ areainv + yearcc + yearcc2 + yearcc3, data = munich_rent_index)
+summary(additive_m4)
+```
+
+Now we calculate the partial residuals for $\text{area}$ and $\text{yearc}$ define by:
+
+$$
+\hat{\epsilon}_{\text{area}, i} = \text{rentsqm}_{i} - \hat{\beta_{0}} - \hat{f}_{2}(\text{yearc}_{i})
+$$
+
+With the effect $f(\text{yearc}_{i})$:
+
+$$
+\hat{f}_{2}(\text{yearc}) = \beta_{2} \cdot \text{yearc}_{i} + \beta_{3} \cdot {\text{yearc}_{i}}^{2} + \beta_{4} \cdot {\text{yearc}_{i}}^{3}
+$$
+
+And:
+
+$$
+\hat{\epsilon}_{\text{yearc}, i} = \text{rentsqm}_{i} - \hat{\beta_{0}} - \hat{f}_{1}(\text{area}_{i})
+$$
+
+With the effect $f(\text{yearc}_{i})$:
+
+$$
+\hat{f}_{1}(\text{yearc}) = \beta_{1} \cdot \frac{1}{\text{area}_{i}}
+$$
+
+```{r, fig.width=10, fig.height=4, fig.align='center'}
+par(mfrow = c(1, 2))
+
+beta_add_m4 <- additive_m4$coefficients
+
+area_seq <- seq(min(munich_rent_index$area), max(munich_rent_index$area), length.out = 100)
+
+area_effect <- function(area){
+  inv_area <- 1 / area
+  cent_area <- inv_area - mean(inv_area)
+  beta_add_m4[2] * cent_area
+}
+
+yearc_effect <- function(yearc){
+  yearc_center <- yearc - mean(yearc)
+  poly_yearc <- poly(yearc_center, 3)
+  beta_add_m4[3] * poly_yearc[, 1] + beta_add_m4[4] * poly_yearc[, 2] + beta_add_m4[5] * poly_yearc[, 3]
+}
+
+residual_area <- munich_rent_index$rentsqm - beta_add_m4[1] - yearc_effect(munich_rent_index$yearc)
+plot(
+  munich_rent_index$area,
+  residual_area,
+  main = 'effect of area',
+  xlab = 'area in sqm',
+  ylab = 'effect of area / partial residuals'
+)
+lines(area_seq, area_effect(area_seq), col = 'red', lwd = 2)
+
+residual_year <- munich_rent_index$rentsqm - beta_add_m4[1] - area_effect(munich_rent_index$area)
+plot(
+  munich_rent_index$yearc,
+  residual_year,
+  main = 'effect of year of construction',
+  xlab = 'year of construction',
+  ylab = 'effect of year of construction / partial residuals'
+)
+lines(yearc_seq, yearc_effect(yearc_seq), col = 'red', lwd = 2)
+```
+
+## Example 3.6 Munich Rent Index — Effect Coding
+
+We adjust the regression model with the coding values of location:
+
+$$
+\mathcc{E}(\text{rentsqm}_{i}) = \beta_{0} + \beta_{1} \cdot \text{glocation}_{1} + \beta_{2} \cdot \text{tlocation}_{1}
+$$
+
+```{r}
+munich_rent_index$glocation <- 0
+munich_rent_index$glocation[munich_rent_index$location == 2] <- 1
+munich_rent_index$glocation[munich_rent_index$location == 1] <- -1
+
+munich_rent_index$tlocation <- 0
+munich_rent_index$tlocation[munich_rent_index$location == 3] <- 1
+munich_rent_index$tlocation[munich_rent_index$location == 1] <- -1
+
+cod_model <- lm(
+  rentsqm ~ glocation + tlocation,
+  data = munich_rent_index
+)
+summary(cod_model)
+```
+
+## Example 3.7 Munich Rent Index — Interaction with Quality of Kitchen
+
+We import the new updated model of 2001, available at [official page of the dataset](https://www.uni-goettingen.de/en/551625.html) as all the datasets:
+
+```{r}
+munich_rent_url_01 <- "https://www.uni-goettingen.de/de/document/download/e00d039e9c1f28ab404b27b0b14931f1.raw/rent98_00.raw"
+
+munich_rent_index_01 <- read.table(
+  url(munich_rent_url_01),
+  header = 1,
+  colClasses = c(
+    "numeric", "numeric", "numeric",
+    "numeric", "integer", "integer",
+    "integer", "integer", "integer",
+    "integer", "numeric", "numeric",
+    "numeric"
+  )
+)
+
+summary(munich_rent_index_01)
+```
+
+And we adjust the model:
+
+$$
+\begin{matrix}
+  \widehat{\text{rentsqm}}_{i} = & \beta_{0} + \beta_{1} \text{areainvc}_{i} + \beta_{2} \text{yearco}_{i} + \beta_{3} \text{yearco2}_{i} + \beta_{4} \text{yearco3}_{i} \\
+   & + \beta_{5} \text{year01}_{i} + \beta_{6} \text{nkitchen}_{i} + \beta_{7} \text{pkitchen}_{i} \\
+   & + \beta_{8} \text{nkitchen}_{i} \cdot \text{year01}_{i} + \beta_{9} \text{pkitchen}_{i} \cdot \text{year01}_{i}
+\end{matrix}
+$$
+
+```{r}
+munich_rent_index_01$areainvc <- munich_rent_index_01$invarea - mean(munich_rent_index_01$invarea)
+munich_rent_index_01$yearco <- munich_rent_index_01$yearc - mean(munich_rent_index_01$yearc)
+poly_year_01 <- poly(munich_rent_index_01$yearco, 3)
+munich_rent_index_01$yearco <- poly_year_01[, 1]
+munich_rent_index_01$yearco2 <- poly_year_01[, 2]
+munich_rent_index_01$yearco3 <- poly_year_01[, 3]
+
+interaction_model <- lm(
+  rentsqm_euro ~ areainvc + yearco + yearco2 + yearco3 + year01 + nkitchen + pkitchen + nkitchen * year01 + pkitchen * year01,
+  data = munich_rent_index_01
+)
+
+summary(interaction_model)
+```
+
+## Example 3.8 Munich Rent Index — Interaction Between Living Area and Location
+
+The model to adjust ius defined as:
+
+$$
+\mathbb{E}(\text{rentsqm}_{i}) = \beta_{0} + \beta_{1} \cdot \text{tlocation} + \beta_{2} \cdot \overline{\frac{1}{\text{area}}} + \beta{3} \cdot \text{area} \cdot \text{tlocation}
+$$
+
+We use the dataset for average or top location only and change the dummy variable $\text{tlocation}$ to $0$ (average) and $1$ (top). Finally, we visualize the effect as described in the book.
+
+```{r, fig.width=10, fig.height=4, fig.align='center'}
+par(mfrow = c(1, 2))
+at_rent <- subset(munich_rent_index, location == 1 | location == 3)
+at_rent$tlocation[at_rent$location == 1] <- 0
+summary(at_rent)
+
+area_location_model <- lm(
+  rentsqm ~ tlocation + areainv + area:tlocation,
+  data = at_rent
+)
+summary(area_location_model)
+
+beta_al <- area_location_model$coefficients
+
+f1_area <- function(area){
+  areainvc <- (1 / area) - mean(1 / area)
+  beta_al[3] * areainvc
+}
+
+f2_area <- function(area){
+  beta_al[4] * area
+}
+
+small_effect <- f1_area(area_seq)
+big_effect <- beta_al[2] + f1_area(area_seq) + f2_area(area_seq)
+
+ylim <- c(min(c(small_effect, big_effect)), max(c(small_effect, big_effect)))
+
+plot(
+  area_seq,
+  small_effect,
+  main = 'area effects based on a linear interaction',
+  xlab = 'area in sqm',
+  ylab = 'area effects',
+  ylim = ylim,
+  type = 'l',
+  col = 'darkblue',
+  lwd = 2
+)
+lines(area_seq, big_effect, col = 'red', lwd = 2)
+
+plot(
+  area_seq,
+  beta_al[2] + f2_area(area_seq),
+  main = 'varying effect of top location',
+  xlab = 'area in sqm',
+  ylab = 'Varying effect of top location',
+  type = 'l',
+  col = 'darkblue',
+  lwd = 2
+)
+```
+
+## Example 3.9 Orthogonal Design
+
+Just for exemplify, we define the orthogonal process describe as an R function:
+
+$$
+\tilde{x}^{j} = x^{j} - \widetilde{X}_{j} \left ( {\widetilde{X}_{j}}^{T} \widetilde{X}_{j} \right )^{-1} {\widetilde{X}_{j}}^{T} x^{j}
+$$
+
+```{r}
+orthogonal_design <- function(x){
+  x_out <- cbind(x[, 1] - mean(x[, 1]), matrix(0, nrow = nrow(x), ncol = ncol(x) - 1))
+  for (i in 2:ncol(x)){
+    x_hat <- as.matrix(x_out[, 1:(i-1)])
+    x_inv <- solve(t(x_hat) %*% x_hat)
+    x_out[, i] <- x[, i] - x_hat %*% x_inv %*% t(x_hat) %*% x[, i]
+  }
+  x_out
+}
+```
+We test this function on the polynomial of the $\text{yearc}$ variable:
+
+```{r}
+poly_test <- poly(munich_rent_index$yearc, 3, raw = TRUE)
+orthogonal_test <- orthogonal_design(poly_test)
+
+# And check it
+c(
+  orthogonal_test[, 1] %*% orthogonal_test[, 2],
+  orthogonal_test[, 2] %*% orthogonal_test[, 3],
+  orthogonal_test[, 1] %*% orthogonal_test[, 3]
+)
+```
+
+Why did it not result?
+
+## Example 3.10 Munich Rent Index — Comparison of Models Using ${R}^{2}$
+
+We compare the models: $M1$, $M2$, $M3$, and $M4$ using its coefficient of determination $R^{2}$
+
+```{r}
+coeff_deter <- data.frame(
+  `R Squared` = c(summary(m1)$r.squared, summary(m2)$r.squared, summary(m3)$r.squared, summary(m4)$r.squared),
+  row.names = c("M1", "M2", "M3", "M4")
+)
+coeff_deter
+```
+
+## Example 3.11 Simple Linear Regression
+
+For the model:
+
+$$
+y_{i} = \beta x_{i} + \epsilon_{i}
+$$
+
+We can verify:
+
+$$
+\left ( {X_{n}}^{T} X_{n} \right )^{-1} \to 0
+$$
+
+And:
+
+$$
+\max_{i=1,...,n} {x_{i}}^{T} \left ( {X_{n}}^{T} X_{n} \right )^{-1} x_{i} \to 0 \text{ for } n \to \infty
+$$
+
+### $x_{i} = i$:
+
+$$
+\left ( {X_{n}}^{T} X_{n} \right )^{-1} = \left ( (1, 2, 3, \cdots, n) \left ( \begin{matrix}
+1 \\
+2 \\
+\vdots  \\
+n
+\end{matrix} \right ) \right )^{-1} = \left ( 1 + 4 + \cdots + n^2 \right )^{-1} \to 0
+$$
+
+And:
+
+$$
+\max_{i=1,...,n} ( 1, 2, \cdots, n ) \left ( 1 + 4 + \cdots + n^2 \right )^{-1} \left ( \begin{matrix}
+1 \\
+2 \\
+\vdots  \\
+n
+\end{matrix} \right ) \to 0 \text{ for } n \to \infty
+$$
+
+### $x_{i} = \frac{1}{i}$:
+
+$$
+\left ( {X_{n}}^{T} X_{n} \right )^{-1} = \left ( \left (1, 0.5, 0.33, \cdots, \frac{1}{n} \right ) \left ( \begin{matrix}
+1 \\
+0.5 \\
+\vdots  \\
+\frac{1}{n}
+\end{matrix} \right ) \right )^{-1} = \left ( \sum_{i=1}^{n} \frac{1}{i^{2}} \right )^{-1} \not{\to} 0
+$$
+
+And:
+
+$$
+\max_{i=1,...,n} \left ( 1, 0.5, \cdots, \frac{1}{n} \right ) \left ( \sum_{i = 1}^{n} \frac{1}{i^{2}} \right )^{-1} \left ( \begin{matrix}
+1 \\
+0.5 \\
+\vdots  \\
+\frac{1}{n}
+\end{matrix} \right ) \not{\to} 0 \text{ for } n \to \infty
+$$
+
+### $x_{i} = \frac{1}{\sqrt{i}}$:
+
+$$
+\left ( {X_{n}}^{T} X_{n} \right )^{-1} = \left ( \sum_{i = 1}^{n} \frac{1}{i} \right )^{-1} \to 0
+$$
+
+And:
+
+$$
+\max_{i=1,...,n} \left ( 1, \frac{1}{\sqrt{2}}, \cdots, \frac{1}{\sqrt{n}} \right ) \left ( \sum_{i = 1}^{n} \frac{1}{i} \right )^{-1} \begin{matrix}
+1 \\
+\frac{1}{\sqrt{2}} \\
+\vdots \\
+\frac{1}{\sqrt{n}}
+\end{matrix} \to 0
+$$
+
+## Example 3.12 Munich Rent Index — Hypothesis Testing
+
+The regression model to adjust is:
+
+$$
+\begin{matrix}
+\text{rentsqm}_{i} = & \beta_{0} + \beta_{1} \text{areainvc}_{i} + \beta_{2} \text{yearco}_{i} + \beta_{3} \text{yearco2}_{i} + \beta_{4} \text{yearco3}_{i} \\
+& + \beta_{5} \text{nkitchen}_{i} + \beta_{6} \text{pkitchen}_{i} + \beta_{7} \text{year01}_{i} + \epsilon_{i}
+\end{matrix}
+$$
+
+```{r}
+hypothesis_model <- lm(
+  rentsqm_euro ~ areainvc + yearco + yearco2 + yearco3 + nkitchen + pkitchen + year01,
+  data = munich_rent_index_01
+)
+summary(hypothesis_model)
+```
+
+So we want to test the hypothesis:
+
+$$
+\begin{matrix}
+H_{0} : \beta_{7} = 0 & \text{against} & H_{1} : \beta_{7} \neq 0
+\end{matrix}
+$$
+
+About the significance of the follow-up measure.
+
+$$
+\begin{matrix}
+H_{0} : \left ( \begin{matrix}
+\beta_{5} \\
+\beta_{6}
+\end{matrix} \right ) = \left ( \begin{matrix}
+0 \\
+0
+\end{matrix} \right ) & \text{against} & H_{1} : \left ( \begin{matrix}
+\beta_{5} \\
+\beta_{6}
+\end{matrix} \right ) \neq \left ( \begin{matrix}
+0 \\
+0
+\end{matrix} \right )
+\end{matrix}
+$$
+
+About the significance of the kitchen variable. And a final test about the significance of differentiate between these two type of kitchens:
+
+$$
+\begin{matrix}
+H_{0} : \beta_{5} - \beta_{6} = 0 & \text{against} & H_{1} : \beta_{5} - \beta_{6} \neq 0
+\end{matrix}
+$$
+
+## Example 3.13 Munich Rent Index — Standard Output and Hypothesis Tests
+
+For the first test ($H_{0} : \beta_{7} = 0$), we calculate:
+
+$$
+t_{7} = \frac{\hat{\beta}_{7}}{{\widehat{\text{Var}(\hat{\beta}_{7})}}^{1/2}} \sim t_{1 - \alpha / 2} (n - p)
+$$
+
+The covariance matrix is:
+
+```{r}
+cov_matrix <- vcov(hypothesis_model)
+cov_matrix
+```
+
+We check the $\text{Var}(\hat{\beta}_{7})$ is the last value.
+
+```{r}
+var_7 <- cov_matrix[8, 8]
+t_7 <- hypothesis_model$coefficients[8] / sqrt(var_7)
+t_7
+```
+
+And this coincides with the value given in the `summary`.
+
+For the second test, we compute the $F$ value as:
+
+$$
+F = \frac{1}{r} {\hat{\beta}}^{T} \widehat{\text{Cov} \left ( \hat{\beta} \right )}^{-1} \hat{\beta} \sim F_{1, n - p}
+$$
+
+With the $\hat{\beta}$ define in the test $\left ( \begin{matrix}
+\hat{\beta_{5}} \\
+\hat{\beta_{6}}
+\end{matrix} \right )$, then $r=2$ and $n - p = n - 8$:
+
+```{r}
+df <- nrow(munich_rent_index_01) - 8
+r <- 2
+beta_hat <- as.matrix(hypothesis_model$coefficients[6:7])
+f_56 <- (1/2) * t(beta_hat) %*% solve(cov_matrix[6:7, 6:7]) %*% beta_hat
+f_56
+```
+
+We get expected $F$:
+
+```{r}
+f_crit <- qf(p = 0.95, r, df)
+f_crit
+```
+
+And we reject the null hypothesis.
+
+The third and final test comparing $\beta_{5}$ and $\beta_{6}$ between each other. We need:
+
+$$
+\widehat{\text{Var}(\hat{\beta}_{5} - \hat{\beta}_{6})} = \widehat{\text{Var}(\hat{\beta}_{5})} + \widehat{\text{Var}(\hat{\beta}_{6})} - 2 \cdot \widehat{\text{Cov}(\hat{\beta}_{5}, \hat{\beta}_{6})}
+$$
+
+Using the $\widehat{\text{Cov}(\hat{\beta})}$ matrix:
+
+```{r}
+cov_5_6 <- cov_matrix[6, 7]
+var_5 <- cov_matrix[6, 6]
+var_6 <- cov_matrix[7, 7]
+var_5_6 <- var_5 + var_6 - 2 * cov_5_6
+f_5_6 <- (hypothesis_model$coefficients[6] - hypothesis_model$coefficients[7])^2 / var_5_6
+f_5_6
+```
+
+And this $F$ critical, using $r=1$:
+
+```{r}
+f_crit <- qf(p = 0.95, 1, df)
+f_crit
+```
+
+So, in this case, we do not reject the null hypothesis.
+
+## Example 3.14 Munich Rent Index — Confidence Intervals
+
+The confidence interval for $\beta_{7}$ is obtain using:
+
+$$
+\beta_{7} \pm t_{n - p} \left (1 - \alpha / 2 \right ) \cdot \widehat{\text{Var}(\hat{\beta}_{7})}^{1/2}
+$$
+
+```{r}
+inter <- qt(1 - 0.05 / 2, df) * sqrt(var_7)
+c(hypothesis_model$coefficients[8] - inter, hypothesis_model$coefficients[8] + inter)
+```
+
+## Example 3.15 Munich Rent Index — Prediction Intervals
+
+Using the prediction interval:
+
+$$
+{x_{0}}^{T} \cdot \hat{\beta} \pm t_{n-p}(1 - \alpha / 2) \hat{\sigma} \left ( 1 + {x_{0}}^{T} \left (X^{T} X \right )^{1} x_{0} \right )^{1/2}
+$$
+
+We can obtain the $\hat{\sigma}$ directly from the model or using:
+
+$$
+(n - p) \hat{\sigma}^2 = \epsilon^{T} \epsilon
+$$
+
+```{r}
+sigma_model <- summary(hypothesis_model)$sigma
+sigma_2 <- t(as.matrix(hypothesis_model$residuals)) %*% as.matrix(hypothesis_model$residuals) / (nrow(munich_rent_index_01) - 8)
+sigma <- sqrt(sigma_2)
+c(sigma_model, sigma)
+```
+
+We are also going to use the design matrix:
+
+```{r}
+design_matrix <- as.matrix(hypothesis_model$model)
+design_matrix[, 1] <- 1
+colnames(design_matrix)[1] <- "1"
+head(design_matrix)
+```
+
+```{r, fig.width=10, fig.height=6, fig.align='center'}
+area_seq <- seq(min(munich_rent_index_01$area), max(munich_rent_index_01$area), length.out = 100)
+areainvc <- (1 / area_seq) - mean(1 / area_seq)
+
+betam <- hypothesis_model$coefficients
+yearcc <- munich_rent_index_01[munich_rent_index_01$yearc == 1918, ][1, ]
+# Three last terms were added for completeness
+constant <- betam[1] + betam[3] * yearcc$yearco + betam[4] * yearcc$yearco2 + betam[5] * yearcc$yearco3 + betam[6] * 0 + betam[7] * 0 + betam[8] * 0
+
+plot(
+  munich_rent_index_01$area,
+  munich_rent_index_01$rentsqm_euro,
+  xlab = 'area in sqm',
+  ylab = 'estimated rent per sqm'
+)
+beta_1 <- hypothesis_model$coefficients[2]
+lines(area_seq, constant + beta_1 * areainvc, col = 'red', lwd = 2)
+
+conf_inter <- qt(1 - 0.05 / 2, df) * sqrt(cov_matrix[2, 2])
+beta_conf <- c(beta_1 - conf_inter, beta_1 + conf_inter)
+lines(area_seq, constant + beta_conf[1] * areainvc, col = 'darkblue', lwd = 2)
+lines(area_seq, constant + beta_conf[2] * areainvc, col = 'darkblue', lwd = 2)
+
+x_o <- as.matrix(cbind(
+  1,
+  areainvc,
+  yearcc$yearco,
+  yearcc$yearco2,
+  yearcc$yearco3,
+  0,
+  0,
+  0
+))
+
+pred_inter <- NULL
+
+for (i in seq_len(nrow(x_o)))
+  x_o_i <- as.matrix(x_o[i, ])
+  pred_inter <- c(pred_inter, qt(1 - 0.05 / 2, df) * sigma * sqrt(
+    1 + (
+      t(x_o_i) %*% solve(t(design_matrix)%*%design_matrix) %*% x_o_i
+   ))
+)
+
+lines(area_seq, constant + beta_conf[1] * areainvc - pred_inter, col = 'gray', lwd = 2)
+lines(area_seq, constant + beta_conf[2] * areainvc + pred_inter, col = 'gray', lwd = 2)
+```
+
+This can also be done using `predict`:
+
+```{r, fig.width=10, fig.height=6, fig.align='center'}
+x_o <- as.data.frame(cbind(
+  areainvc,
+  yearcc$yearco,
+  yearcc$yearco2,
+  yearcc$yearco3,
+  0,
+  0,
+  0
+))
+colnames(x_o) <- colnames(hypothesis_model$model)[2:8]
+confidence_interval <- predict(hypothesis_model, x_o, interval = "confidence")
+
+plot(
+    munich_rent_index_01$area,
+    munich_rent_index_01$rentsqm_euro,
+    xlab = 'area in sqm',
+    ylab = 'estimated rent per sqm'
+)
+lines(area_seq, confidence_interval[, "fit"], col = 'red', lwd = 2)
+lines(area_seq, confidence_interval[, "lwr"], col = 'darkblue', lwd = 2)
+lines(area_seq, confidence_interval[, "upr"], col = 'darkblue', lwd = 2)
+
+prediction_interval <- predict(hypothesis_model, x_o, interval = "prediction")
+lines(area_seq, prediction_interval[, "lwr"], col = 'gray', lwd = 2)
+lines(area_seq, prediction_interval[, "upr"], col = 'gray', lwd = 2)
+```
+
+## Example 3.16 Polynomial Regression
+
+

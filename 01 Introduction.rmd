@@ -1,0 +1,336 @@
+---
+title: "Introduction"
+output: html_notebook
+---
+
+We import the data from the [official page of the dataset](https://www.uni-goettingen.de/en/551625.html).
+
+## Example 1.1: Munich Rent Index
+
+```{r}
+munich_rent_url <- "https://www.uni-goettingen.de/de/document/download/64c29c1b1fccb142cfa8f29a942a9e05.raw/rent99.raw"
+
+munich_rent_index <- read.table(
+  url(munich_rent_url),
+  header = 1,
+  colClasses = c(
+    "numeric", "numeric", "numeric",
+    "numeric", "factor", "factor",
+    "factor", "factor", "factor"
+  )
+)
+
+# Convert to logical
+munich_rent_index$bath <- munich_rent_index$bath == 1
+munich_rent_index$kitchen <- munich_rent_index$kitchen == 1
+munich_rent_index$cheating <- munich_rent_index$cheating == 1
+summary(munich_rent_index)
+```
+
+For future use, this code is going to be available in an R script in [`import_data/munich_rent_index.R`](import_data/munich_rent_index.R).
+
+# Example 2.2: Malnutrition in Zambia
+
+```{r}
+zambia_url <- "https://www.uni-goettingen.de/de/document/download/d90a2d7b26c4504ab6630cf36cbae2fa.raw/zambia_height92.raw"
+
+malnutrition_zambia <- read.table(
+  url(zambia_url),
+  header = 1,
+  colClasses = c(
+    "numeric", "factor", "numeric",
+    "integer", "numeric", "numeric",
+    "numeric", "factor", "factor",
+    "factor", "factor", "factor"
+  )
+)
+
+# Convert to logical
+malnutrition_zambia$m_work <- malnutrition_zambia$m_work == 1
+summary(malnutrition_zambia)
+```
+
+Code for import in [`import_data/malnutrition_zambia.R`](import_data/malnutrition_zambia.R).
+
+## Example 1.3: Patent Opposition
+
+```{r}
+patent_url <- "https://www.uni-goettingen.de/de/document/download/66eb4eb0bc0e8f6acf1d02ddf683f077.raw/patentdata.raw"
+
+patent_opposition <- read.table(
+  url(patent_url),
+  header = 1,
+  colClasses = c(
+    "factor", "factor", "factor",
+    "factor", "factor", "integer",
+    "integer", "integer", "integer"
+  )
+)
+# Convert to logical
+patent_opposition$biopharm <- patent_opposition$biopharm == 1
+patent_opposition$ustwin <- patent_opposition$ustwin == 1
+patent_opposition$patus <- patent_opposition$patus == 1
+patent_opposition$patgsgr <- patent_opposition$patgsgr == 1
+summary(patent_opposition)
+```
+
+R code in [`import_data/patent_opposition.R`](import_data/patent_opposition.R). 
+
+## Example 1.4: Forest Health Status
+
+```{r}
+forest_url <- "https://www.uni-goettingen.de/de/document/download/f5ef58e05aff8b6546dcf993aa73a480.raw/beach.raw"
+
+forest_health_status <- read.table(
+  url(forest_url),
+  header = 1,
+  colClasses = c(
+    "factor", "numeric", "factor",
+    "numeric", "numeric", "numeric",
+    "numeric", "numeric", "numeric",
+    "numeric", "numeric", "factor",
+    "factor", "factor", "factor",
+    "factor"
+  ),
+  na.strings = "."
+)
+summary(forest_health_status)
+```
+
+R code in [`import_data/forest_health_status.R`](import_data/forest_health_status.R).
+
+## Example 1.5: Munich Rent Index - Univariate Distributions
+
+```{r, fig.width=10, fig.height=8, fig.align='center'}
+par(mfrow = c(2, 2))
+
+ylab <- 'estimated density'
+hist(munich_rent_index$rent, freq=FALSE, xlab = 'net rent in Euro', ylab = ylab)
+lines(density(munich_rent_index$rent), col = "red", lwd = 2)
+
+hist(munich_rent_index$rentsqm, freq=FALSE, xlab = 'net rent per sqm in Euro', ylab = ylab)
+lines(density(munich_rent_index$rentsqm), col = "red", lwd = 2)
+
+hist(munich_rent_index$area, freq=FALSE, xlab = 'area ub sqm', ylab = ylab)
+lines(density(munich_rent_index$area), col = "red", lwd = 2)
+
+hist(munich_rent_index$yearc, freq=FALSE, xlab = 'year of construction', ylab = ylab)
+lines(density(munich_rent_index$yearc), col = "red", lwd = 2)
+```
+
+## Example 1.6: Malnutrition in Zambia - Univariate Distributions
+
+```{r, fig.width=10, fig.height=12, fig.align='center'}
+par(mfrow = c(3, 2))
+
+ylab <- 'estimated density'
+hist(malnutrition_zambia$zscore, freq=FALSE, xlab = 'child\'s Z-score', ylab = ylab)
+lines(density(malnutrition_zambia$zscore), col = "red", lwd = 2)
+
+hist(malnutrition_zambia$c_breastf, freq=FALSE, xlab = 'duration of breast feeding in month', ylab = ylab)
+lines(density(malnutrition_zambia$c_breastf), col = "red", lwd = 2)
+
+hist(malnutrition_zambia$c_age, freq=FALSE, xlab = 'child\'s age in months', ylab = ylab)
+lines(density(malnutrition_zambia$c_age), col = "red", lwd = 2)
+
+hist(malnutrition_zambia$m_agebirth, freq=FALSE, xlab = 'mother\'s age at birth', ylab = ylab)
+lines(density(malnutrition_zambia$m_agebirth), col = "red", lwd = 2)
+
+hist(malnutrition_zambia$m_height, freq=FALSE, xlab = 'mother\'s height in cm', ylab = ylab)
+lines(density(malnutrition_zambia$m_height), col = "red", lwd = 2)
+
+hist(malnutrition_zambia$m_bmi, freq=FALSE, xlab = 'mother\'s BMI', ylab = ylab)
+lines(density(malnutrition_zambia$m_bmi), col = "red", lwd = 2)
+```
+
+## Example 1.7: Munich Rent Index - Scatter Plots
+
+```{r, fig.width=10, fig.height=8, fig.align='center'}
+par(mfrow = c(2, 2))
+
+plot(
+  x = munich_rent_index$area,
+  y = munich_rent_index$rent,
+  xlab = "area in sqm",
+  ylab = "net rent in Euro"
+)
+
+plot(
+  x = munich_rent_index$area,
+  y = munich_rent_index$rentsqm,
+  xlab = "area in sqm",
+  ylab = "net rent per sqm in Euro"
+)
+
+plot(
+  x = munich_rent_index$yearc,
+  y = munich_rent_index$rent,
+  xlab = "year of construction",
+  ylab = "net rent in Euro"
+)
+
+plot(
+  x = munich_rent_index$yearc,
+  y = munich_rent_index$rentsqm,
+  xlab = "year of construction",
+  ylab = "net rent per sqm in Euro"
+)
+```
+
+## Example 1.8: Munich Rent Index - Clusttered Scatter Plots
+
+```{r, fig.width=10, fig.height=8, fig.align='center'}
+par(mfrow = c(2, 2))
+
+boxplot(
+  rent ~ area,
+  data = munich_rent_index,
+  xlab = "area in sqm",
+  ylab = "net rent in Euro",
+  xaxt = "n"
+)
+
+boxplot(
+  rentsqm ~ area,
+  data = munich_rent_index,
+  xlab = "area in sqm",
+  ylab = "net rent per sqm in Euro",
+  xaxt = "n"
+)
+
+boxplot(
+  rent ~ yearc,
+  data = munich_rent_index,
+  xlab = "year of construction",
+  ylab = "net rent in Euro",
+  xaxt = "n"
+)
+
+boxplot(
+  rentsqm ~ yearc,
+  data = munich_rent_index,
+  xlab = "year of construction",
+  ylab = "net rent per sqm in Euro",
+  xaxt = "n"
+)
+```
+
+## Example 1.9: Munich Rent Index - Categorical Explanatory Variables
+
+```{r, fig.width=10, fig.height=4, fig.align='center'}
+par(mfrow = c(1, 2))
+
+boxplot(
+  rentsqm ~ location,
+  data = munich_rent_index,
+  xlab = '',
+  ylab = 'net rennt per sqm',
+  names = c('average', 'good', 'top')
+)
+
+plot(density(subset(munich_rent_index, location == 1)$rentsqm), xlab = 'net rent per sqm', ylab = 'estimated density', lwd = 2)
+lines(density(subset(munich_rent_index, location == 2)$rentsqm), col = "green", lwd= 2)
+lines(density(subset(munich_rent_index, location == 3)$rentsqm), col = "red", lwd= 2)
+
+legend(
+  "topright",
+  legend = c('average', 'good', 'top'),
+  col = c('black', 'green', 'red'),
+  lwd = 2
+)
+```
+
+## Example 1.10: Malnutrition in Zambia - Graphical Association Analysis
+
+```{r, fig.width=10, fig.height=4, fig.align='center'}
+par(mfrow = c(1, 2))
+
+plot(
+  x = malnutrition_zambia$c_age,
+  y = malnutrition_zambia$zscore,
+  xlab = "child's age in month",
+  ylab = "Z-score"
+)
+
+boxplot(
+  zscore ~ c_age,
+  data = malnutrition_zambia,
+  xlab = "child's age in month",
+  ylab = "Z-score",
+  xaxt = "n"
+)
+```
+
+```{r, fig.width=10, fig.height=12, fig.align='center'}
+par(mfrow = c(3, 2))
+
+boxplot(
+  zscore ~ c_breastf,
+  data = malnutrition_zambia,
+  xlab = "duration of breastfeeding in months",
+  ylab = "average Z-score",
+  xaxt = "n"
+)
+
+malnutrition_zambia$bmi_group <- cut(
+  malnutrition_zambia$m_bmi,
+  breaks = seq(
+    min(malnutrition_zambia$m_bmi),
+    max(malnutrition_zambia$m_bmi),
+    length.out = 101
+  ),
+  include.lowest = TRUE
+)
+
+boxplot(
+  zscore ~ bmi_group,
+  data = malnutrition_zambia,
+  xlab = "mother's BMI",
+  ylab = "average Z-score",
+  xaxt = "n"
+)
+
+malnutrition_zambia$age_group <- cut(
+  malnutrition_zambia$m_agebirth,
+  breaks = seq(
+    min(malnutrition_zambia$m_agebirth),
+    max(malnutrition_zambia$m_agebirth),
+    length.out = 101
+  ),
+  include.lowest = TRUE
+)
+
+boxplot(
+  zscore ~ age_group,
+  data = malnutrition_zambia,
+  xlab = "mother's age in years",
+  ylab = "average Z-score",
+  xaxt = "n"
+)
+
+malnutrition_zambia$height_group <- cut(
+  malnutrition_zambia$m_height,
+  breaks = seq(
+    min(malnutrition_zambia$m_height),
+    max(malnutrition_zambia$m_height),
+    length.out = 101
+  ),
+  include.lowest = TRUE
+)
+
+boxplot(
+  zscore ~ height_group,
+  data = malnutrition_zambia,
+  xlab = "mother's height in cm",
+  ylab = "average Z-score",
+  xaxt = "n"
+)
+
+boxplot(
+  zscore ~ m_education,
+  data = malnutrition_zambia,
+  xlab = 'mother\'s level of education',
+  ylab = 'Z-score',
+  names = c('none', 'primary', 'secondary', 'higher')
+)
+```

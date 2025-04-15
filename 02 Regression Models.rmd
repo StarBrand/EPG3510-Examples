@@ -1,0 +1,616 @@
+---
+title: "Regression Models"
+output: html_notebook
+---
+
+## Example 2.1: Munich Rent Index - Simple Linear Regression
+
+Importing the dataset as in [01 Introduction.rmd](01-Introduction.nb.html), but using the R script available in [`import_data/munich_rent_index.R`](import_data/munich_rent_index.R):
+
+```{r}
+source("import_data/munich_rent_index.R")
+```
+
+Filtering by apartments build after 1966:
+
+```{r}
+rent_1966 <- subset(munich_rent_index, yearc >= 1966)
+
+summary(rent_1966)
+```
+
+And use only average locations:
+
+```{r}
+av_rent_1966 <- subset(rent_1966, location == 1)
+
+summary(av_rent_1966)
+```
+
+Then the simple linear regression model is given by
+
+$$
+\mathbb{E}({\text{rent}}) = \beta_{0} + \beta_{1} \cdot \text{area}
+$$
+
+```{r, fig.width=10, fig.height=4, fig.align='center'}
+simple_model <- lm(rent ~ area, data = av_rent_1966)
+
+summary(simple_model)
+
+par(mfrow = c(1, 2))
+
+plot(
+  x = av_rent_1966$area,
+  y = av_rent_1966$rent,
+  xlab = 'area in sqm',
+  ylab = 'net rent in Euro'
+)
+
+plot(
+  x = av_rent_1966$area,
+  y = av_rent_1966$rent,
+  xlab = 'area in sqm',
+  ylab = 'net rent in Euro'
+)
+abline(simple_model, col = "red", lwd=2)
+```
+
+## Example 2.2: Munich Rent Index - Simple Linear Regression
+
+Choosing the rent per square meter as response variable, we have the model:
+
+$$
+\mathbb{E}(\text{rent per sqm}) = \beta_{0} + \beta_{1} \cdot \text{area}
+$$
+
+```{r, fig.width=5, fig.height=4, fig.align='center'}
+per_sqm_model <- lm(rentsqm ~ area, data = av_rent_1966)
+
+summary(per_sqm_model)
+
+plot(
+  x = av_rent_1966$area,
+  y = av_rent_1966$rentsqm,
+  xlab = 'area in sqm',
+  ylab = 'net rent per sqm'
+)
+abline(per_sqm_model, col = "red", lwd=2)
+```
+
+We change the variable
+
+$$
+x = \frac{1}{\text{area}}
+$$
+
+Giving us the model:
+
+$$
+\mathbb{E}(\text{rent per sqm}) = \beta_{0} + \beta_{1} \cdot x = \beta_{0} + \beta_{1} \cdot \frac{1}{\text{area}}
+$$
+
+```{r, fig.width=5, fig.height=4, fig.align='center'}
+av_rent_1966$inv_area <- 1 / av_rent_1966$area
+
+per_sqm_inv_model <- lm(rentsqm ~ inv_area, data = av_rent_1966)
+
+summary(per_sqm_inv_model)
+
+plot(
+  x = av_rent_1966$area,
+  y = av_rent_1966$rentsqm,
+  xlab = 'area in sqm',
+  ylab = 'net rent per sqm'
+)
+x_seq <- seq(min(1 / av_rent_1966$area), max(1 / av_rent_1966$area), length.out = 100)
+predicted <- predict(per_sqm_inv_model, newdata = data.frame(inv_area = x_seq))
+
+lines(1 / x_seq, predicted, col = "red", lwd = 2)
+```
+
+## Example 2.3: Munich Rent Index - Rent in Average and Good Localtions
+
+We add the variable $\text{good location}$ to the model:
+
+$$
+\mathbb{E}(\text{rent}) = \beta_{0} + \beta_{1} \cdot \text{area} + \beta_{2} \cdot \text{good localtion}
+$$
+
+```{r, fig.width=10, fig.height=8, fig.align='center'}
+ag_rent_1966 <- subset(rent_1966, location %in% c(1, 2))
+summary(ag_rent_1966)
+
+ag_rent_1966$glocation <- ag_rent_1966$location == 2
+summary(ag_rent_1966)
+
+good_model <- lm(rent ~ area + glocation, data = ag_rent_1966)
+summary(good_model)
+
+par(mfrow = c(2, 2))
+
+colors <- c("black", "red")
+
+plot(
+    x = ag_rent_1966$area,
+    y = ag_rent_1966$rent,
+    xlab = 'area in sqm',
+    ylab = 'net rent in Euro',
+    col = colors[as.numeric(ag_rent_1966$location)]
+)
+
+legend(
+  "topleft",
+  legend = c('average', 'good'),
+  col = colors,
+  pch = 19
+)
+
+g_rent_1966 <- subset(rent_1966, location == 2)
+simple_good_model <- lm(rent ~ area, data = g_rent_1966)
+
+plot(NA, xlim = range(rent_1966$area), ylim = range(rent_1966$rent), xlab = 'area in sqm', ylab = 'estimated net rent')
+abline(simple_model)
+abline(simple_good_model, col = "red", lwd = 2)
+
+legend(
+  "topleft",
+  legend = c('average', 'good'),
+  col = c('black', 'red'),
+  lwd = 2
+)
+
+plot(NA, xlim = range(rent_1966$area), ylim = range(rent_1966$rent), xlab = 'area in sqm', ylab = 'esimated net rent')
+
+beta <- good_model$coefficients
+
+abline(beta[1], beta[2])
+abline(beta[1] + beta[3], beta[2], col = "red", lwd = 2)
+
+legend(
+  "topleft",
+  legend = c('average', 'good'),
+  col = c('black', 'red'),
+  lwd = 2
+)
+```
+
+## Example 2.4 Munich Rent Index — Nonlinear Influence of Living Area
+
+We add the good location dummy variable to the model of example 2.2:
+
+$$
+\mathbb{E}(\text{rent per sqm}) = \beta_{0} + \beta_{1} \cdot \frac{1}{\text{area}} + \beta_{2} \cdot \text{good location}
+$$
+
+```{r, fig.width=10, fig.height=4, fig.align='center'}
+g_multiple_model <- lm(rentsqm ~ I(1/area) + glocation, data = ag_rent_1966)
+summary(g_multiple_model)
+
+par(mfrow = c(1, 2))
+
+colors <- c("black", "red")
+
+plot(
+    x = ag_rent_1966$area,
+    y = ag_rent_1966$rentsqm,
+    xlab = 'area in sqm',
+    ylab = 'net rent in Euro',
+    col = colors[as.numeric(ag_rent_1966$location)]
+)
+
+legend(
+  "topleft",
+  legend = c('average', 'good'),
+  col = colors,
+  pch = 19
+)
+
+plot(NA, xlim = range(rent_1966$area), ylim = range(rent_1966$rentsqm), xlab = 'area in sqm', ylab = 'esimated net rent per sqm')
+
+x_seq <- seq(min(ag_rent_1966$area), max(ag_rent_1966$area), length.out = 100)
+beta <- g_multiple_model$coefficients
+
+lines(x_seq, beta[1] + beta[2] * (1/x_seq), col = 'black', lwd = 2)
+lines(x_seq, beta[1] + beta[2] * (1/x_seq) + beta[3], col = 'red', lwd = 2)
+
+legend(
+  "topleft",
+  legend = c('average', 'good'),
+  col = c('black', 'red'),
+  lwd = 2
+)
+```
+
+## Example 2.5 Munich Rent Index — Interaction Between Living Area and Location
+
+Adding the interaction term between area and good location:
+
+$$
+\mathbb{E}(\text{rent}) = \beta_{0} + \beta_{1} \cdot \text{area} + \beta_{2} \cdot \text{good location} + \beta_{3} \cdot \text{interaction}
+$$
+
+```{r, fig.width=5, fig.height=4, fig.align='center'}
+ag_rent_1966$inter <- ag_rent_1966$area * as.numeric(ag_rent_1966$glocation)
+
+summary(ag_rent_1966$inter)
+
+g_inter_model <- lm(rent ~ area + glocation + inter, data = ag_rent_1966)
+summary(g_inter_model)
+
+plot(NA, xlim = range(ag_rent_1966$area), ylim = range(ag_rent_1966$rent), xlab = 'area in sqm', ylab = 'esimated net rent')
+
+x_seq <- seq(min(ag_rent_1966$area), max(ag_rent_1966$area), length.out = 100)
+beta <- g_inter_model$coefficients
+
+lines(x_seq, beta[1] + beta[2] * x_seq, col = 'black', lwd = 2)
+lines(x_seq, beta[1] + (beta[2] + beta[4]) * x_seq + beta[3], col = 'red', lwd = 2)
+
+legend(
+  "topleft",
+  legend = c('average', 'good'),
+  col = c('black', 'red'),
+  lwd = 2
+)
+```
+
+## Example 2.6 Munich Rent Index — Multiple Regression Model
+
+Now we add the top location ($\text{location} = 3$):
+
+```{r}
+munich_rent_index$glocation <- munich_rent_index$location == 2
+munich_rent_index$tlocation <- munich_rent_index$location == 3
+summary(munich_rent_index)
+```
+
+A multiple model with all available variables:
+
+$$
+\begin{matrix}
+\mathbb{E}(\text{rentsqm}) = & \beta_{0} + \beta_{1} \cdot \frac{1}{\text{area}} + \beta_{2} \cdot \text{yearc} + \beta_{3} \cdot \text{yearc}^2 + \beta_{4} \cdot \text{good location} + \beta_{5} \cdot \text{top location} \\
+ &  + \beta_{6} \cdot \text{bath} + \beta_{7} \cdot \text{kitchen} + \beta_{8} \cdot \text{cheating} \\
+\end{matrix}
+$$
+
+```{r, fig.width=10, fig.height=4, fig.align='center'}
+multiple_model <- lm(rentsqm ~ I(1/area) + yearc + I(yearc^2) + glocation + tlocation + bath + kitchen + cheating, data = munich_rent_index)
+summary(multiple_model)
+
+par(mfrow = c(1, 2))
+
+plot(
+    x = munich_rent_index$area,
+    y = munich_rent_index$rentsqm,
+    xlab = 'area in sqm',
+    ylab = 'estimated net rent in Euro',
+)
+
+area_seq <- seq(min(munich_rent_index$area), max(munich_rent_index$area), length.out = 100)
+beta <- multiple_model$coefficients
+
+constant <- beta[5] * mean(as.numeric(munich_rent_index$glocation)) + 
+  beta[6] * mean(as.numeric(munich_rent_index$tlocation)) + 
+  beta[7] * mean(as.numeric(munich_rent_index$bath)) + 
+  beta[8] * mean(as.numeric(munich_rent_index$kitchen)) + 
+  beta[9] * mean(as.numeric(munich_rent_index$cheating))
+
+year_constant <- beta[3] * mean(munich_rent_index$yearc) + beta[4] * mean(munich_rent_index$yearc^2)
+
+lines(area_seq, beta[1] + beta[2] * (1 / area_seq) + constant + year_constant, col = 'red', lwd = 2)
+
+plot(
+    x = munich_rent_index$yearc,
+    y = munich_rent_index$rentsqm,
+    xlab = 'year of construction',
+    ylab = 'estimated net rent in Euro',
+)
+
+area_constant <- beta[2] * mean(1 / munich_rent_index$area)
+
+year_seq <- seq(min(munich_rent_index$yearc), max(munich_rent_index$yearc), length.out = 100)
+lines(year_seq, beta[1] + beta[3] * year_seq + beta[4] * year_seq^2 + constant + area_constant, col = 'red', lwd = 2)
+```
+
+## Example 2.7 Patent Opposition
+
+Import the patent opposition from script:
+
+```{r}
+source("import_data/patent_opposition.R")
+```
+
+We left the $\text{opp}$ dataset as integer, so we can model the response variable as binary:
+
+```{r}
+patent_opposition$opp <- as.integer(patent_opposition$opp == 1)
+summary(patent_opposition$opp)
+```
+
+## Example 2.8: Patent Opposition
+
+We explore the histogram of claims ($\text{nclaims}$) and citations ($\text{ncit}$):
+
+```{r, fig.width=10, fig.height=4, fig.align='center'}
+par(mfrow = c(1, 2))
+
+hist(patent_opposition$nclaims, ylab = 'estimated density', xlab = 'number of claims', freq = FALSE)
+lines(density(patent_opposition$nclaims), col = 'red', lwd = 2)
+
+hist(patent_opposition$ncit, ylab = 'estimated density', xlab = 'number of citations', freq = FALSE)
+lines(density(patent_opposition$ncit), col = 'red', lwd = 2)
+```
+
+We then subset the dataset to exclude $\text{nclaims} \leq 60$ and $\text{ncit} \leq 15$. And also extract the biopharmacological ones ($\text{biopharm} == 0$):
+
+```{r}
+deoutlier_patent_opp <- subset(patent_opposition, nclaims <= 60 & ncit <= 15)
+not_biopharm_patent_opp <- subset(deoutlier_patent_opp, biopharm == 0)
+summary(not_biopharm_patent_opp)
+```
+
+We then fit the logistic regression model:
+
+$$
+P(\text{opp}_{i} = 1) = \frac{\exp(\eta_{i})}{1 + \exp(\eta_{i})}
+$$
+
+$$
+\eta_{i} = \beta_{0} + \beta_{1} \cdot \text{year}_{i} + \beta_{2} \cdot \text{ncit}_{i} + \beta_{3} \cdot \text{nclaims}_{i} + \beta_{4} \cdot \text{ustwin}_{i} + \beta_{5} \cdot \text{patus}_{i} + \beta_{6} \cdot \text{patgsgr}_{i} + \beta_{7} \cdot \text{ncountry}_{i}
+$$
+
+```{r}
+pat_opp_model <- glm(opp ~ year + ncit + nclaims + ustwin + patus + patgsgr + ncountry, data = not_biopharm_patent_opp, family = binomial)
+summary(pat_opp_model)
+```
+
+We then generate the table of odd ratios:
+
+```{r}
+pat_opp_odd_ratios <- cbind(pat_opp_model$coefficients, 0)
+colnames(pat_opp_odd_ratios) <- c('Estimated Coefficients', 'Estimated Odd Ratios')
+pat_opp_odd_ratios[, 2] <- exp(pat_opp_odd_ratios[, 1])
+pat_opp_odd_ratios[1, 2] <- NA
+pat_opp_odd_ratios
+```
+
+Then we repeeat the process with the $\text{ncountry}$ variable as a polynomial:
+
+$$
+\begin{matrix}
+\eta_{i} = & \beta_{0} + \beta_{1} \cdot \text{year}_{i} + \beta_{2} \cdot \text{ncit}_{i} + \beta_{3} \cdot \text{nclaims}_{i} + \beta_{4} \cdot \text{ustwin}_{i} + \beta_{5} \cdot \text{patus}_{i} + \beta_{6} \cdot \text{patgsgr}_{i} \\
+ & + \beta_{7} \cdot \text{ncountry}_{i} + \beta_{8} \cdot \text{ncountry}_{i}^{2} + \beta_{9} \cdot \text{ncountry}_{i}^{3}
+\end{matrix}
+$$
+
+```{r, fig.width=10, fig.height=4, fig.align='center'}
+pat_opp_poly_model <- glm(opp ~ year + ncit + nclaims + ustwin + patus + patgsgr + ncountry + I(ncountry ^ 2) + I(ncountry ^ 3), data = not_biopharm_patent_opp, family = binomial)
+summary(pat_opp_poly_model)
+
+par(mfrow = c(1, 2))
+beta <- pat_opp_model$coefficients
+constant <- beta[1] +
+  beta[2] * mean(not_biopharm_patent_opp$year) +
+  beta[3] * mean(not_biopharm_patent_opp$ncit) +
+  beta[4] * mean(not_biopharm_patent_opp$nclaims) +
+  beta[5] * mean(as.numeric(not_biopharm_patent_opp$ustwin)) +
+  beta[6] * mean(as.numeric(not_biopharm_patent_opp$patus)) +
+  beta[7] * mean(as.numeric(not_biopharm_patent_opp$patgsgr))
+
+beta_poly <- pat_opp_poly_model$coefficients
+poly_constant <- beta_poly[1] +
+  beta_poly[2] * mean(not_biopharm_patent_opp$year) +
+  beta_poly[3] * mean(not_biopharm_patent_opp$ncit) +
+  beta_poly[4] * mean(not_biopharm_patent_opp$nclaims) +
+  beta_poly[5] * mean(as.numeric(not_biopharm_patent_opp$ustwin)) +
+  beta_poly[6] * mean(as.numeric(not_biopharm_patent_opp$patus)) +
+  beta_poly[7] * mean(as.numeric(not_biopharm_patent_opp$patgsgr))
+
+ncountry_seq <- seq(min(not_biopharm_patent_opp$ncountry), max(not_biopharm_patent_opp$ncountry), length.out = 100)
+effect <- constant + beta[8] * ncountry_seq
+poly_effect <- poly_constant + beta_poly[8] * ncountry_seq + beta_poly[9] * ncountry_seq ^ 2 + beta_poly[10] * ncountry_seq ^ 3
+plot(
+  NA,
+  xlim = range(not_biopharm_patent_opp$ncountry),
+  ylim = range(poly_effect),
+  xlab = 'number of designated states for the patent',
+  ylab = 'estimated effect'
+)
+lines(ncountry_seq, poly_effect)
+lines(ncountry_seq, effect, col = 'red', lwd = 2)
+
+legend(
+  "topleft",
+  legend = c("polynomial", "linear"),
+  col = c("black", "red"),
+  lwd = 2
+)
+
+poly_prob <- exp(poly_effect) / (1 + exp(poly_effect))
+plot(
+  NA,
+  xlim  = range(not_biopharm_patent_opp$ncountry),
+  ylim = range(poly_prob),
+  xlab = 'number of designated states for the patent',
+  ylab = 'estimated probability'
+)
+lines(ncountry_seq, poly_prob)
+prob <- exp(effect) / (1 + exp(effect))
+lines(ncountry_seq, prob, col = 'red', lwd = 2)
+legend(
+  "topleft",
+  legend = c("polynomial", "linear"),
+  col = c("black", "red"),
+  lwd = 2
+)
+```
+
+## Example 2.9 Hormone Therapy with Rats
+
+We import the _Hormone Therapy with Rats_ dataset from the [oficial page of the dataset](https://www.uni-goettingen.de/en/551625.html), as the other example:
+
+```{r}
+rats_url <- "https://www.uni-goettingen.de/de/document/download/3ac5a038b19297fb8609dfc28319cbb7.raw/rats.raw"
+
+rats_dataset <- read.table(
+  url(rats_url),
+  header = 1,
+  colClasses = c(
+    "factor", "factor", "numeric",
+    "integer", "numeric", "numeric",
+    "factor", "factor", "factor",
+    "numeric", "numeric", "numeric" 
+  )
+)
+rats_dataset$low <- rats_dataset$low == 1
+rats_dataset$high <- rats_dataset$high == 1
+rats_dataset$control <- rats_dataset$control == 1
+summary(rats_dataset)
+```
+
+We plot the timeseries of the rats divided in the three groups: **control**, **low** and **high** dose:
+
+```{r, fig.width=7, fig.height=12, fig.align='center'}
+par(mfrow = c(3, 1))
+
+control_rats <- subset(rats_dataset, control)
+low_rats <- subset(rats_dataset, low)
+high_rats <- subset(rats_dataset, high)
+
+library(viridis)
+
+plot_rats_subsets <- function(rats_subset, title) {
+  plot(
+    NA,
+    xlim = range(rats_dataset$time),
+    ylim = range(na.omit(rats_dataset$response)),
+    xlab = "age in days",
+    ylab = "response",
+    main = title
+  )
+  subjects <- unique(rats_subset$subject)
+  for (i in seq_along(subjects)) {
+    colors <- length(subjects)
+    lines(
+      subset(rats_subset, subject == subjects[i])$time,
+      subset(rats_subset, subject == subjects[i])$response,
+      col = viridis(colors)[i]
+    )
+  }
+}
+
+plot_rats_subsets(control_rats, "control group")
+plot_rats_subsets(low_rats, "low dose")
+plot_rats_subsets(high_rats, "high dose")
+```
+
+We add the transformed age:
+
+$$
+t = \log(1 + (\text{age} - 45) / 10)
+$$
+
+```{r}
+rats_dataset$t <- log(1 + (rats_dataset$time - 45) / 10)
+rats_dataset$C <- as.integer(rats_dataset$control)
+rats_dataset$L <- as.integer(rats_dataset$low)
+rats_dataset$H <- as.integer(rats_dataset$high)
+summary(rats_dataset)
+```
+
+And we fit the model:
+
+$$
+y_{ij} = \beta_{0} + \gamma_{0i} + \beta_{1} L_{i} \cdot t_{ij} + \beta_{2} H_{i} \cdot t_{ij} + \beta_{3} C_{i} \cdot t_{ij} + \gamma_{1i} \cdot t_{ij} + \epsilon_{ij}
+$$
+
+With $\epsilon_{ij} \sim N(0, \sigma^2)$ as in all these examples. And $\gamma_{0i}$ and $\gamma_{1i}$ are random effects associated with the subjects following:
+
+$$
+\gamma_{0i} \sim N(0, \tau_{0}^2) \wedge \gamma_{1i} \sim N(0, \tau_{1}^2)
+$$
+
+## Example 2.10 Hormone Therapy with Rats
+
+```{r}
+library(lme4)
+rats_model <- lmer(
+  response ~ L:t + H:t + C:t + (1 + t | subject), data = rats_dataset
+)
+summary(rats_model)
+```
+
+And the simpler model eliminating the subject-specific term $\tau_{1i} \cdot t_{ij}$:
+
+$$
+y_{ij} = \beta_{0} + \gamma_{0i} + \beta_{1} L_{i} \cdot t_{ij} + \beta_{2} H_{i} \cdot t_{ij} + \beta_{3} C_{i} \cdot t_{ij} + \epsilon_{ij}
+$$
+
+```{r}
+simple_rats_model <- lmer(
+  response ~ L:t + H:t + C:t + (1 | subject), data = rats_dataset
+)
+summary(simple_rats_model)
+```
+
+We then plot a kernel density estimator with a normal distribution for those values. Alongside a normal quantity plot:
+
+```{r, fig.width=10, fig.height=4, fig.align='center'}
+par(mfrow = c(1, 2))
+tau_0i <- ranef(rats_model)$subject[, 1]
+
+kde <- density(tau_0i)
+
+tau_seq <- seq(min(kde$x), max(kde$x), length.out = 100)
+
+plot(
+  x = tau_seq,
+  y = dnorm(tau_seq, mean = mean(tau_0i), sd = sd(tau_0i)),
+  type = 'l',
+  main = 'random intercept',
+  xlab = 'random intercept',
+  ylab = 'density',
+  col = 'red',
+  lwd = 2
+)
+
+lines(
+  x = kde$x,
+  y = kde$y,
+  col = 'black',
+  lwd = 2
+)
+
+legend(
+  'topleft',
+  legend = c('kde', 'adapted normal'),
+  col = c('black', 'red'),
+  lwd = 2
+)
+
+qqnorm(
+  tau_0i, 
+  main = 'random intercept',
+  xlab = 'quantiles of normal distribution',
+  ylab = 'random intercept',
+  pch = 19,
+  col = "darkblue"
+)
+
+# Add reference line
+qqline(
+  tau_0i,
+  col = "black", 
+  lwd = 2
+)
+```
+
+## Example 2.11 Malnutrition in Zambia
+
+Import data from script:
+
+```{r}
+source("import_data/malnutrition_zambia.R")
+```
+
+_To be continued..._
