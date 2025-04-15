@@ -3,6 +3,10 @@ title: "Regression Models"
 output: html_notebook
 ---
 
+```{r}
+set.seed(123)
+```
+
 ## Example 2.1: Munich Rent Index - Simple Linear Regression
 
 Importing the dataset as in [01 Introduction.rmd](01-Introduction.nb.html), but using the R script available in [`import_data/munich_rent_index.R`](import_data/munich_rent_index.R):

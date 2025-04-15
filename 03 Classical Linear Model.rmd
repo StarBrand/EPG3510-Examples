@@ -1,7 +1,11 @@
 ---
-title: "The Classical LinearModel"
+title: "Classical Linear Model"
 output: html_notebook
 ---
+
+```{r}
+set.seed(123)
+```
 
 ## Homoscedastic Error Variances
 
@@ -506,7 +510,7 @@ lines(yearc_seq, yearc_effect(yearc_seq), col = 'red', lwd = 2)
 We adjust the regression model with the coding values of location:
 
 $$
-\mathcc{E}(\text{rentsqm}_{i}) = \beta_{0} + \beta_{1} \cdot \text{glocation}_{1} + \beta_{2} \cdot \text{tlocation}_{1}
+\mathbb{E}(\text{rentsqm}_{i}) = \beta_{0} + \beta_{1} \cdot \text{glocation}_{1} + \beta_{2} \cdot \text{tlocation}_{1}
 $$
 
 ```{r}
@@ -1021,4 +1025,199 @@ lines(area_seq, prediction_interval[, "upr"], col = 'gray', lwd = 2)
 
 ## Example 3.16 Polynomial Regression
 
+Simulated data from the real model:
 
+$$
+y_{i} = -1 + 0.3 x_{i} + 0.4 {x_{i}}^{2} - 0.8 {x_{i}}^{3} + \epsilon_{i} \text{ with } \epsilon_{i} \sim N(0, {0.07}^{2})
+$$
+
+```{r, fig.width=10, fig.height=12, fig.align='center'}
+par(mfrow = c(3, 2))
+
+x_seq <- seq(0, 1, length.out = 50)
+training_data <- data.frame(
+  x = x_seq,
+  y = -1 + 0.3 * x_seq + 0.4 * x_seq ^ 2 - 0.8 * x_seq ^ 3 + rnorm(50, 0, 0.07)
+)
+validation_data <- data.frame(
+  x = x_seq,
+  y = -1 + 0.3 * x_seq + 0.4 * x_seq ^ 2 - 0.8 * x_seq ^ 3 + rnorm(50, 0, 0.07)
+)
+
+plot_training_data <- function(title) {
+  plot(
+    training_data,
+    main = title,
+    xlab = 'x',
+    ylab = 'y'
+  )
+}
+
+plot_training_data('training_data')
+plot(
+  validation_data,
+  main = 'validation_data',
+  xlab = 'x',
+  ylab = 'y'
+)
+
+adjust_polynomial <- function(l) {
+  model <- "y ~ x"
+  if (l != 1) {
+    for (i in 2:l){
+      model <- paste0(model, " + I(x^", i, ")")
+    }
+  }
+  lm(model, data = training_data)
+}
+
+polynomial_models <- lapply(1:9, adjust_polynomial)
+plot_training_data('regression line')
+lines(x_seq, predict(polynomial_models[1][[1]]), col = 'red', lwd = 2)
+
+plot_training_data('polynomial regression with l=2')
+lines(x_seq, predict(polynomial_models[2][[1]]), col = 'red', lwd = 2)
+
+plot_training_data('polynomial regression with l=5')
+lines(x_seq, predict(polynomial_models[5][[1]]), col = 'red', lwd = 2)
+
+mean_square_error <- function(model, data){
+  (1 / 50) * sum((data$y - predict(model, new_data = data)) ^ 2)
+}
+
+mse_training_data <- unlist(lapply(polynomial_models, mean_square_error, data = training_data))
+mse_validation_data <- unlist(lapply(polynomial_models, mean_square_error, data = validation_data))
+
+plot(
+  seq(1, 9, 1),
+  mse_training_data,
+  ylim = c(min(mse_training_data, mse_validation_data), max(mse_training_data, mse_validation_data)),
+  main = 'MSE for training and validation data',
+  xlab = 'degree of polynomial',
+  ylab = 'MSE',
+  type = 'l',
+  col = 'darkblue',
+  lwd = 2
+)
+lines(seq(1, 9, 1), mse_validation_data, col = 'red', lwd = 2)
+```
+
+## Example 3.17 Correlated Covariates
+
+Simulate the data as following:
+
+$$
+x_{1} \sim U(0, 1) \wedge x_{3} \sim U(0, 1)
+$$
+
+$$
+x_{2} = x_{1} + u \text{ with } u \sim U(0, 1)
+$$
+
+$$
+y \sim N(-1 + 0.3 x_{1} + 0.2 x_{3}, {0.2}^{2})
+$$
+
+```{r, fig.width=10, fig.height=10, fig.align='center'}
+n <- 150
+
+x1 <- runif(n, 0, 1)
+x3 <- runif(n, 0, 1)
+u <- runif(n, 0, 1)
+
+x2 <- x1 + u
+
+y <- rnorm(n, mean = -1 + 0.3 * x1 + 0.2 * x3, 0.2)
+
+corr_cov_data <- data.frame(
+  y = y,
+  x1 = x1,
+  x2 = x2,
+  x3 = x3
+)
+pairs(corr_cov_data)
+```
+
+Adjust the model with $x_{1}$, $x_{2}$ and $x_{3}$:
+
+```{r}
+wrong_model <- lm(y ~ x1 + x2 + x3, data = corr_cov_data)
+summary(wrong_model)
+```
+
+Adjust the model with $x_{1}$ and $x_{3}$:
+
+```{r}
+correct_model <- lm(y ~ x1 + x3, data = corr_cov_data)
+summary(correct_model)
+```
+
+## Example 3.18 Polynomial Regression — Model Choice with AIC
+
+We calculate AIC using:
+
+$$
+AIC = n \cdot \log(\hat{\sigma}^{2}) +  2 \left ( \left | M \right | + 1 \right )
+$$
+
+```{r, fig.width=5, fig.height=4, fig.align='center'}
+aic <- function(model){
+  m <- ncol(model$model) - 1
+  n <- nrow(model$model)
+  n * log(summary(model)$sigma^2) + 2 * (m + 1)
+}
+
+aic_values <- unlist(lapply(polynomial_models, aic))
+plot(
+  aic_values,
+  main = 'AIC as a function of degree of polynomials',
+  xlab = 'degrees of polynomial',
+  ylab = 'aic',
+  type = 'l',
+  col = 'darkblue',
+  lwd = 2
+)
+```
+
+As always, this can also be done using R:
+
+```{r, fig.width=5, fig.height=4, fig.align='center'}
+aic <- function(model){
+  AIC(model)
+}
+
+aic_values <- unlist(lapply(polynomial_models, aic))
+plot(
+        aic_values,
+        main = 'AIC as a function of degree of polynomials',
+        xlab = 'degrees of polynomial',
+        ylab = 'aic',
+        type = 'l',
+        col = 'darkblue',
+        lwd = 2
+)
+```
+
+## Example 3.19 Prices of Used Cars — Model Choice
+
+As for all dataset, we import the _"prices of used cars"_ dataset from the [official page of the dataset](https://www.uni-goettingen.de/en/551625.html):
+
+```{r}
+cars_url <- "https://www.uni-goettingen.de/de/document/download/062cadfda1c4c295f9460b49c7f5799e.raw/golffull.raw"
+
+used_cars <- read.table(
+  url(cars_url),
+  header = 1,
+  colClasses = c(
+    "numeric", "integer", "numeric",
+    "integer", "factor", "factor",
+    "numeric", "numeric", "numeric",
+    "numeric", "numeric", "numeric"
+  )
+)
+
+# Convert to logical
+used_cars$extras1 <- used_cars$extras1 == 1
+used_cars$extras2 <- used_cars$extras2 == 1
+summary(used_cars)
+```
