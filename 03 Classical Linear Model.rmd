@@ -433,7 +433,7 @@ A new model is defined using the orthogonal polynomial of year of construction:
 
 ```{r}
 munich_rent_index$areainv <- (1 / munich_rent_index$area) - mean(1 / munich_rent_index$area)
-poly_year <- poly(munich_rent_index$yearco - mean(munich_rent_index$yearco), 3)
+poly_year <- poly(munich_rent_index$yearco, 3)
 munich_rent_index$yearcc <- poly_year[, 1]
 munich_rent_index$yearcc2 <- poly_year[, 2]
 munich_rent_index$yearcc3 <- poly_year[, 3]
@@ -479,8 +479,7 @@ area_effect <- function(area){
 }
 
 yearc_effect <- function(yearc){
-  yearc_center <- yearc - mean(yearc)
-  poly_yearc <- poly(yearc_center, 3)
+  poly_yearc <- predict(poly_year, yearc - 1900)
   beta_add_m4[3] * poly_yearc[, 1] + beta_add_m4[4] * poly_yearc[, 2] + beta_add_m4[5] * poly_yearc[, 3]
 }
 
@@ -1118,7 +1117,7 @@ $$
 y \sim N(-1 + 0.3 x_{1} + 0.2 x_{3}, {0.2}^{2})
 $$
 
-```{r, fig.width=10, fig.height=10, fig.align='center'}
+```{r, fig.width=8, fig.height=8, fig.align='center'}
 n <- 150
 
 x1 <- runif(n, 0, 1)
@@ -1219,5 +1218,408 @@ used_cars <- read.table(
 # Convert to logical
 used_cars$extras1 <- used_cars$extras1 == 1
 used_cars$extras2 <- used_cars$extras2 == 1
+
+# Recalculate polynomials
+poly_kilometer <- poly(used_cars$kilometer, 3)
+used_cars[, c("kilometerop1", "kilometerop2", "kilometerop3")] <- poly_kilometer
+poly_age <- poly(used_cars$age, 3)
+used_cars[, c("ageop1", "ageop2", "ageop3")] <- poly_age
 summary(used_cars)
+```
+
+Exploring the data:
+
+```{r, fig.width=10, fig.height=12, fig.align='center'}
+par(mfrow = c(3, 2))
+
+plot(
+  used_cars$age,
+  used_cars$price,
+  main = 'Scatter plot: sales price versus age in months',
+  xlab = 'age in months',
+  ylab = 'sales prince in 1000 Euro'
+)
+
+plot(
+  used_cars$kilometer,
+  used_cars$price,
+  main = 'Scatter plot: sales price versus kilometer reading',
+  xlab = 'kilometer reading in 1000 km',
+  ylab = 'sales prince in 1000 Euro'
+)
+
+plot(
+  used_cars$TIA,
+  used_cars$price,
+  main = 'Scatter plot: sales price versus months until TIA',
+  xlab = 'months until next TIA appointment',
+  ylab = 'sales prince in 1000 Euro'
+)
+
+boxplot(
+  price ~ extras1,
+  data = used_cars,
+  main = 'Box plot: sales prince with or without ABS',
+  xlab = '',
+  ylab = 'sales prices in 1000 Euro',
+  names = c('no ABS', 'ABS')
+)
+
+boxplot(
+  price ~ extras2,
+  data = used_cars,
+  main = 'Box plot: sales prince with or without sunroof',
+  xlab = '',
+  ylab = 'sales prices in 1000 Euro',
+  names = c('no sunroof', 'sunroof')
+)
+```
+
+We explore the models suggested:
+
+**$M1$**
+
+$$
+\begin{matrix}
+  \mathbb{E}(\text{price}) = & \beta_{0} + \beta_{1} \text{kilometerop1} + \beta_{2} \text{kilometerop2} + \beta_{3} \text{kilometerop3} \\
+   & + \beta_{4} \text{ageop1} + \beta_{5} \text{ageop2} + \beta_{6} \text{ageop3}
+\end{matrix}
+$$
+
+With $\text{kilometerop}i$ the $i$ term of a polynomial of degree 3 of the $\text{kilometer}$ variable. Equivalent to $\text{ageop}i$.
+
+**$M2$**
+
+$$
+\begin{matrix}
+  \mathbb{E}(\text{price}) = & \beta_{0} + \beta_{1} \text{kilometerop1} + \beta_{2} \text{kilometerop2} + \beta_{3} \text{kilometerop3} \\
+   & + \beta_{4} \text{ageop1} + \beta_{5} \text{ageop2} + \beta_{6} \text{ageop3} \\
+   & + \beta_{7} \text{extras1}
+\end{matrix}
+$$
+
+**$M3$**
+
+$$
+\begin{matrix}
+  \mathbb{E}(\text{price}) = & \beta_{0} + \beta_{1} \text{kilometerop1} + \beta_{2} \text{kilometerop2} + \beta_{3} \text{kilometerop3} \\
+   & + \beta_{4} \text{ageop1} + \beta_{5} \text{ageop2} + \beta_{6} \text{ageop3} \\
+   & + \beta_{7} \text{extras2}
+\end{matrix}
+$$
+
+**$M4$**
+
+$$
+\begin{matrix}
+  \mathbb{E}(\text{price}) = & \beta_{0} + \beta_{1} \text{kilometerop1} + \beta_{2} \text{kilometerop2} + \beta_{3} \text{kilometerop3} \\
+   & + \beta_{4} \text{ageop1} + \beta_{5} \text{ageop2} + \beta_{6} \text{ageop3} \\
+   & + \beta_{7} \text{TIA}
+\end{matrix}
+$$
+
+**$M5$**
+
+$$
+\begin{matrix}
+  \mathbb{E}(\text{price}) = & \beta_{0} + \beta_{1} \text{kilometerop1} + \beta_{2} \text{kilometerop2} + \beta_{3} \text{kilometerop3} \\
+   & + \beta_{4} \text{ageop1} + \beta_{5} \text{ageop2} + \beta_{6} \text{ageop3} \\
+   & + \beta_{7} \text{extras1} + \beta_{8} \text{extras2}
+\end{matrix}
+$$
+
+**$M6$**
+
+$$
+\begin{matrix}
+  \mathbb{E}(\text{price}) = & \beta_{0} + \beta_{1} \text{kilometerop1} + \beta_{2} \text{kilometerop2} + \beta_{3} \text{kilometerop3} \\
+   & + \beta_{4} \text{ageop1} + \beta_{5} \text{ageop2} + \beta_{6} \text{ageop3} \\
+   & + \beta_{7} \text{extras1} + \beta_{8} \text{TIA}
+\end{matrix}
+$$
+
+**$M7$**
+
+$$
+\begin{matrix}
+  \mathbb{E}(\text{price}) = & \beta_{0} + \beta_{1} \text{kilometerop1} + \beta_{2} \text{kilometerop2} + \beta_{3} \text{kilometerop3} \\
+   & + \beta_{4} \text{ageop1} + \beta_{5} \text{ageop2} + \beta_{6} \text{ageop3} \\
+   & + \beta_{7} \text{extras2} + \beta_{8} \text{TIA}
+\end{matrix}
+$$
+
+**$M8$**
+
+$$
+\begin{matrix}
+  \mathbb{E}(\text{price}) = & \beta_{0} + \beta_{1} \text{kilometerop1} + \beta_{2} \text{kilometerop2} + \beta_{3} \text{kilometerop3} \\
+   & + \beta_{4} \text{ageop1} + \beta_{5} \text{ageop2} + \beta_{6} \text{ageop3} \\
+   & + \beta_{7} \text{extras1} + \beta_{8} \text{extras2} + \beta_{9} \text{TIA}
+\end{matrix}
+$$
+
+
+```{r}
+base_car_model <- "price ~ kilometerop1 + kilometerop2 + kilometerop3 + ageop1 + ageop2 + ageop3"
+used_cars_model <- list(lm(base_car_model, data = used_cars))
+extra_var <- c("extras1", "extras2", "TIA")
+for (extra in extra_var){
+  new_model <- paste0(base_car_model, " + ", extra)
+  used_cars_model[[length(used_cars_model) + 1]] <- lm(new_model, data = used_cars)
+}
+for (tuple in combn(extra_var, 2, simplify = FALSE)){
+  new_model <- paste0(base_car_model, " + ", tuple[1], " + ", tuple[2])
+  used_cars_model[[length(used_cars_model) + 1]] <- lm(new_model, data = used_cars)
+}
+all_extras <- paste(extra_var, collapse = " + ")
+used_cars_model[[length(used_cars_model) + 1]] <- lm(paste0(base_car_model, " + ", all_extras), data = used_cars)
+
+cars_aic <- data.frame(model = seq(1, 8), aic = unlist(lapply(used_cars_model, AIC)))
+cars_aic
+```
+
+9th model are obtained using _"leaps and  bounds"_ algorithm, already implemented on R:
+
+```{r}
+library(leaps)
+
+leaps_model <- regsubsets(price ~ . -age -kilometer, data = used_cars, nvmax = 4)
+
+summary(leaps_model)
+```
+
+As in the book the resulted model is:
+
+**$M9$**
+
+$$
+\mathbb{E}(\text{price}) = \beta_{0} + \beta_{1} \text{kilometerop1} + \beta_{2} \text{kilometerop2} + \beta_{3} \text{ageop1} + \beta_{4} \text{ageop2}
+$$
+
+We add it to the table and plot the AIC:
+
+```{r, fig.width=5, fig.height=5, fig.align='center'}
+selected_var <- names(which(summary(leaps_model)$outmat[4, ] == "*"))
+used_cars_model[[length(used_cars_model) + 1 ]] <- lm(
+  paste0("price ~ ", paste(selected_var, collapse= " + ")), data = used_cars
+)
+cars_aic[9, ] <- c(9, AIC(used_cars_model[[9]]))
+cars_aic
+
+plot(
+  cars_aic,
+  main = 'AIC for the different models',
+  xlab = 'model number',
+  ylab = 'AIC',
+  xaxt = 'n'
+)
+axis(1, at = 1:9)
+```
+
+Showing the age and kilometer effects as in Example 3.5.
+
+
+```{r, fig.width=10, fig.height=4, fig.align='center'}
+par(mfrow = c(1, 2))
+
+beta_m9 <- used_cars_model[[9]]$coefficients
+
+age_seq <- seq(min(used_cars$age), max(used_cars$age), length.out = 100)
+kilometer_seq <- seq(min(used_cars$kilometer), max(used_cars$kilometer), length.out = 100)
+
+age_effect <- function(age){
+  i_poly_age <- predict(poly_age, age)
+  beta_m9[4] * i_poly_age[, 1] + beta_m9[5] * i_poly_age[, 2]
+}
+
+kilometer_effect <- function(kilometer){
+  i_poly_killometer <- predict(poly_kilometer, kilometer)
+  beta_m9[2] * i_poly_killometer[, 1] + beta_m9[3] * i_poly_killometer[, 2]
+}
+
+residual_age <- used_cars$price - beta_m9[1] - kilometer_effect(used_cars$kilometer)
+plot(
+  used_cars$age,
+  residual_age,
+  main = 'effect of age including partial residuals',
+  xlab = 'age in months',
+  ylab = 'effect / partial residuals'
+)
+lines(age_seq, age_effect(age_seq), col = 'red', lwd = 2)
+
+residual_kilometer <- used_cars$price - beta_m9[1] - age_effect(used_cars$age)
+plot(
+  used_cars$kilometer,
+  residual_age,
+  main = 'effect of kilometer reading including partial residuals',
+  xlab = 'kilometer reading in 1000km',
+  ylab = 'effect / partial residuals'
+)
+lines(kilometer_seq, kilometer_effect(kilometer_seq), col = 'red', lwd = 2)
+```
+
+## Example 3.20 Price of Used Cars — Model Diagnosis
+
+The studentized residuals are calculated with the equation:
+
+$$
+r_{i}^{*} = \frac{\hat{\epsilon}_{i}}{\hat{\sigma}_{(i)} \sqrt{1 - h_{ii}}}
+$$
+
+But, you can get them using R:
+
+```{r, fig.width=10, fig.height=8, fig.align='center'}
+par(mfrow = c(2, 2))
+
+t_residuals <- rstudent(used_cars_model[[9]])
+
+n <- nrow(used_cars_model[[9]]$model)
+p <- ncol(used_cars_model[[9]]$model)
+t_critical <- qt(1 - 0.05 / (2 * n), n - p - 1)
+
+plot_studentized_residuals <- function(against, ag_label, short_label){
+  plot(
+    against,
+    t_residuals,
+    main = paste0('studentized residuals verus ', short_label),
+    xlab = ag_label,
+    ylab = 'studentized residuals',
+    ylim = c(min(c(-t_critical - 0.5, t_residuals)), max(c(t_critical + 0.5, t_residuals)))
+  )
+  abline(h = 0, col = 'red', lwd = 2)
+  abline(h = c(-t_critical, t_critical), col = 'gray', lwd = 2)
+}
+plot_studentized_residuals(used_cars_model[[9]]$fitted.values, 'estimated sales price', 'estimated sales price')
+plot_studentized_residuals(used_cars$kilometer, 'kilometer reading in 1000km', 'kilometer reading')
+plot_studentized_residuals(used_cars$age, 'age in months', 'age in months')
+plot_studentized_residuals(used_cars$TIA, 'months to the next TIA appointment', 'months to TIA')
+```
+
+For the standardized residuals:
+
+$$
+r_{i} = \frac{\hat{\epsilon}_{i}}{\hat{\sigma}\sqrt{1 - h_{ii}}}
+$$
+
+But using R:
+
+```{r, fig.width=5, fig.height=5, fig.align='center'}
+n_residuals <- rstandard(used_cars_model[[9]])
+
+qqnorm(n_residuals, col = 'darkblue', main = '', xlab = 'quantiles of normal distribution', ylab = 'quantiles of residuals')
+abline(0, 1, col = 'black', lwd = 2)
+```
+
+## Example 3.21 Prices of Used Cars — Collinearity
+
+Now, we want the $VIF$:
+
+$$
+{VIF}_{j} = \frac{1}{1 - {R_{j}}^{2}}
+$$
+
+```{r}
+library(car)
+vif(used_cars_model[[9]])
+```
+
+All values $< 10$.
+
+## Example 3.22 Prices of Used Cars—Outliers
+
+See graph of example 3.20. Finding the outlier:
+
+```{r}
+t_residuals[t_residuals > t_critical]
+```
+
+## Example 3.23 Prices of Used Cars — Influence Analysis
+
+Getting the $h_{ii}$ values:
+
+$$
+h_{ii} = \frac{1}{n} + {\left ( x_{i} - \overline{x} \right )}^{T} \left ( {\widetilde{X}_{j}}^{T} \widetilde{X}_{j} \right )^{-1} \left ( x_{i} - \overline{x} \right )
+$$
+
+```{r}
+leverage <- hatvalues(used_cars_model[[9]])
+head(leverage)
+range(leverage)
+
+h_critical <- 2 * p / n
+
+big_leverage <- leverage > h_critical
+leverage[big_leverage]
+```
+
+We can plot these points:
+
+```{r, fig.width=10, fig.height=4, fig.align='center'}
+par(mfrow = c(1, 2))
+
+plot(
+  used_cars$age,
+  used_cars$price,
+  main = 'Scatter plot: sales price versus age in months',
+  xlab = 'age in months',
+  ylab = 'sales prince in 1000 Euro'
+)
+points(used_cars$age[big_leverage], used_cars$price[big_leverage], col = 'red', pch = 16)
+
+plot(
+  used_cars$kilometer,
+  used_cars$price,
+  main = 'Scatter plot: sales price versus kilometer reading',
+  xlab = 'kilometer reading in 1000 km',
+  ylab = 'sales prince in 1000 Euro'
+)
+points(used_cars$kilometer[big_leverage], used_cars$price[big_leverage], col = 'red', pch = 16)
+```
+
+And the **Cook's Distance**:
+
+$$
+D_{i} = \frac{{\left ( \hat{y}_{(i)} - \hat{y} \right )}^{T} \left ( \hat{y}_{(i)} - \hat{y} \right )}{p \cdot {\hat{\sigma}}^{2}}
+$$
+
+```{r}
+cook <- cooks.distance(used_cars_model[[9]])
+head(cook)
+range(cook)
+
+big_cook <- cook > 0.5
+cook[big_cook]
+```
+
+## Example 3.24 Prices of Used Cars — Alternative Models
+
+Adjust model 9 for all observations, for $\text{kilometer} \leq 230$ and $\text{kilometer} \geq 50$:
+
+```{r, fig.width=5, fig.height=4, fig.align='center'}
+model_230 <- lm(price ~ kilometerop1 + kilometerop2 + ageop1 + ageop2, data = used_cars[used_cars$kilometer <= 230, ])
+model_50 <- lm(price ~ kilometerop1 + kilometerop2 + ageop1 + ageop2, data = used_cars[used_cars$kilometer >= 50, ])
+
+new_kilometer_effect <- function(kilometer, beta){
+  i_poly_killometer <- predict(poly_kilometer, kilometer)
+  beta[2] * i_poly_killometer[, 1] + beta[3] * i_poly_killometer[, 2]
+}
+
+plot(
+  kilometer_seq,
+  kilometer_effect(kilometer_seq),
+  main = '',
+  xlab = 'kilometer reading in 1000 km',
+  ylab = 'effects',
+  type = 'l',
+  lwd = 2
+)
+lines(kilometer_seq, new_kilometer_effect(kilometer_seq, model_230$coefficients), col = 'red', lwd = 2)
+lines(kilometer_seq, new_kilometer_effect(kilometer_seq, model_50$coefficients), col = 'green', lwd = 2)
+
+legend(
+  "topright",
+  legend = c('LS with all observation', 'LS without kilometer>230', 'LS without kilometer<50'),
+  col = c('black', 'red', 'green'),
+  lwd = 2
+)
 ```

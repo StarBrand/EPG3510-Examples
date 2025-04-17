@@ -1,0 +1,93 @@
+---
+title: "Extensions of the Classical Linear Model"
+output: html_notebook
+---
+
+## Example 4.1 Munich Rent Index — Diagnostics for Heteroscedastic Errors
+
+Importing the Munich Rent Index data:
+
+```{r}
+source("import_data/munich_rent_index.R")
+```
+
+Adjust the model:
+
+$$
+\text{rent}_{i} = \beta_{0} + \beta_{1} \text{area}_{i} + \beta_{2} \text{yearco}_{i} + \beta_{3} \text{yearco2}_{i} + \beta_{4} \text{yearco3}_{i} + \epsilon_{i}
+$$
+
+```{r}
+munich_rent_poly_yearc <- poly(munich_rent_index$yearc, 3)
+munich_rent_index[, c("yearco", "yearco2", "yearco3")] <- munich_rent_poly_yearc
+munich_regression <- lm(rent ~ area + yearco + yearco2 + yearco3, data = munich_rent_index)
+summary(munich_regression)
+```
+
+And we visualize:
+
+
+```{r, fig.width=10, fig.height=12, fig.align='center'}
+par(mfrow = c(3, 2))
+
+area_seq <- seq(min(munich_rent_index$area), max(munich_rent_index$area), length.out = 100)
+yearc_seq <- seq(min(munich_rent_index$yearc), max(munich_rent_index$yearc), length.out = 100)
+
+munich_beta <- munich_regression$coefficients
+
+area_effect <- function(area){
+  munich_beta[2] * area
+}
+
+yearc_effect <- function(yearc){
+  yearc_poly <- predict(munich_rent_poly_yearc, yearc)
+  munich_beta[3] * yearc_poly[, 1] + munich_beta[4] * yearc_poly[, 2] + munich_beta[5] * yearc_poly[, 3]
+}
+
+partial_area <- munich_rent_index$rent - munich_beta[1] - yearc_effect(munich_rent_index$yearc)
+plot(
+  munich_rent_index$area,
+  partial_area,
+  main = 'effect of area incl. partial residuals',
+  xlab = 'area in sqm',
+  ylab = 'effect of area'
+)
+lines(area_seq, area_effect(area_seq), col = 'red', lwd = 2)
+
+partial_year <- munich_rent_index$rent - munich_beta[1] - area_effect(munich_rent_index$area)
+plot(
+  munich_rent_index$yearc,
+  partial_year,
+  main = 'effect of year of construction incl. partial residuals',
+  xlab = 'year of construction',
+  ylab = 'effect of year of construction'
+)
+lines(yearc_seq, yearc_effect(yearc_seq), col = 'red', lwd = 2)
+
+studentized_residuals <- rstudent(munich_regression)
+plot(
+  munich_regression$fitted.values,
+  studentized_residuals,
+  main = 'studentized residuals vs. estimated rent',
+  xlab = 'estimated rent',
+  ylab = 'studentized residuals'
+)
+plot(
+  munich_rent_index$area,
+  studentized_residuals,
+  main = 'studentized residuals vs. area',
+  xlab = 'area in sqm',
+  ylab = 'studentized residuals'
+)
+plot(
+  munich_rent_index$yearc,
+  studentized_residuals,
+  main = 'studentized residuals vs. year of construction',
+  xlab = 'year of construction',
+  ylab = 'studentized residuals'
+)
+```
+
+## Example 4.2 Munich Rent Index — Breusch–Pagan Test
+
+

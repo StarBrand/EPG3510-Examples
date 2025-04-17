@@ -11,7 +11,8 @@ To read just the result, here is the table of contents:
 1. [Introduction](https://starbrand.github.io/EPG3510-Examples/01-Introduction.nb.html)
 2. [Regression Models](https://starbrand.github.io/EPG3510-Examples/02-Regression-Models.nb.html)
 3. [Classical Linear Model](https://starbrand.github.io/EPG3510-Examples/03-Classical-Linear-Model.nb.html)
-4.
+4. [Extensions of the Classical Linear Model](https://starbrand.github.io/EPG3510-Examples/04-Extensions-of-the-Classical-Linear-Model.nb.html)
+5. [.](https://starbrand.github.io/EPG3510-Examples/)
 
 If you want to check the source code for, for example, know how to write the equation in Latex, explore this repository.
 
