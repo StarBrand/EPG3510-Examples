@@ -90,4 +90,175 @@ plot(
 
 ## Example 4.2 Munich Rent Index — Breusch–Pagan Test
 
+Assuming the variance model:
 
+$$
+{\sigma_{i}}^{2} = \sigma_{i} \cdot h \left ( \alpha_{0} + \alpha_{1} \text{areao}_{i} + \alpha_{2} \text{areao2}_{i} + \alpha_{3} \text{areao3}_{i} + \alpha_{4} \text{yearco}_{i} + \alpha_{5} \text{yearco2}_{i} + \alpha_{6} \text{yearco3}_{i} \right )
+$$
+
+We add the polynomial of degree 3 of $\text{area}$:
+
+```{r}
+munich_rent_poly_area <- poly(munich_rent_index$area, 3)
+munich_rent_index[, c("areao", "areao2", "areao3")] <- munich_rent_poly_area
+```
+
+We calculate the Breusch and Pagan Test:
+
+$$
+{\sigma_{i}}^{2} = \sigma_{i} \cdot h \left ( \alpha_{0} + \alpha_{1} {z}_{i1} + \cdots + \alpha_{q} {z}_{iq} \right )
+$$
+
+$$
+\begin{matrix}
+  H_{0}: \alpha_{1} = \cdots = \alpha_{q} = 0 & \text{against} & H_{1}: \alpha_{j} \neq 0 \text{ for at least one } j
+\end{matrix}
+$$
+
+$$
+g_{i} = \frac{{\hat{\epsilon_{i}}}^{2}}{{\hat{\sigma}}_{ML}^{2}}
+$$
+
+$$
+T = \frac{1}{2} \sum_{i=1}^{2} \left ( \hat{g}_{i} - \bar{g} \right )^{2}
+$$
+
+We calculate using R package `lmtest`:
+
+```{r}
+library(lmtest)
+bptest(
+  munich_regression,
+  ~ areao + areao2 + areao3 + yearco + yearco2 + yearco3,
+  data = munich_rent_index
+)
+```
+
+## Example 4.3 Munich Rent Index — Two-Stage Estimation
+
+### First step: Classical linear model
+
+Using the model of Example 4.1:
+
+```{r}
+summary(munich_regression)
+```
+
+### Second step: Auxiliary regression
+
+Estimate the regression model of example
+
+$$
+\log({\hat{\epsilon}_{i}}^{2}) = \alpha_{0} + \alpha_{1} \text{areao}_{i} + \alpha_{2} \text{areao2}_{i} + \alpha_{3} \text{areao3}_{i} + \alpha_{4} \text{yearco}_{i} + \alpha_{5} \text{yearco2}_{i} + \alpha_{6} \text{yearco3}_{i} + \nu_{i}
+$$
+
+```{r, fig.width=10, fig.height=8, fig.align='center'}
+par(mfrow = c(2, 2))
+
+log_sq_residuals <- log(residuals(munich_regression)^2)
+variance_model <- lm(
+  log_sq_residuals ~ areao + areao2 + areao3 + yearco + yearco2 + yearco3,
+  data = munich_rent_index
+)
+summary(variance_model)
+
+plot(
+  munich_rent_index$area,
+  log_sq_residuals,
+  main = 'log. squared residuals vs. area',
+  xlab = 'log. squared residuals',
+  ylab = 'area in sqm'
+)
+
+plot(
+  munich_rent_index$yearc,
+  log_sq_residuals,
+  main = 'log. squared residuals vs. year of construction',
+  xlab = 'log. squared residuals',
+  ylab = 'year of construction'
+)
+
+variance_beta <- variance_model$coefficients
+
+area_variance_effect <- function(area){
+  i_poly_area <- predict(munich_rent_poly_area, area)
+  variance_beta[2] * i_poly_area[, 1] + variance_beta[3] * i_poly_area[, 2] + variance_beta[4] * i_poly_area[, 3]
+}
+
+yearc_variance_effect <- function(yearc){
+  yearc_poly <- predict(munich_rent_poly_yearc, yearc)
+  variance_beta[5] * yearc_poly[, 1] + variance_beta[6] * yearc_poly[, 2] + variance_beta[7] * yearc_poly[, 3]
+}
+
+plot(
+  munich_rent_index$area,
+  log_sq_residuals - variance_beta[1] - yearc_variance_effect(munich_rent_index$yearc),
+  main = 'residual regression: effect of area',
+  xlab = 'effect of area',
+  ylab = 'area in sqm'
+)
+lines(area_seq, area_variance_effect(area_seq), col = 'red', lwd = 2)
+
+plot(
+  munich_rent_index$yearc,
+  log_sq_residuals - variance_beta[1] - area_variance_effect(munich_rent_index$area),
+  main = 'residual regression: effect of year of construction',
+  xlab = 'effect of year of construction',
+  ylab = 'year of construction'
+)
+lines(yearc_seq, yearc_variance_effect(yearc_seq), col = 'red', lwd = 2)
+```
+
+### Third step: Weighted linear model
+
+We calculate the Weight:
+
+```{r}
+weight <- 1 / exp(variance_model$fitted.values)
+head(weight)
+```
+
+And now the adjustment:
+
+```{r}
+weighted_linear_model <- lm(
+  rent ~ area + yearco + yearco2 + yearco3,
+  data = munich_rent_index,
+  weights = weight
+)
+summary(weighted_linear_model)
+```
+
+And we compare the covariance matrix of both model:
+
+```{r}
+vcov(munich_regression)
+vcov(weighted_linear_model)
+```
+
+And the confidence intervals:
+
+```{r}
+linear_confint <- confint(munich_regression)
+linear_confint
+weighted_confint <- confint(weighted_linear_model)
+weighted_confint
+```
+
+## Example 4.4 Munich Rent Index — White-Estimator
+
+We use R to obtain the covariance matrix and the confidence intervals:
+
+```{r}
+library(sandwich)
+robust_se <- sqrt(diag(vcovHC(munich_regression, type = "HC1")))
+coefs <- munich_regression$coefficients
+z <- qnorm(1 - 0.05 / 2)
+lower <- coefs - z * robust_se
+upper <- coefs + z * robust_se
+confint_robust <- data.frame(lower, upper)
+colnames(confint_robust) <- colnames(linear_confint)
+confint_robust
+```
+
+## Example 4.5 Prices of Used Cars — Weighted Regression
